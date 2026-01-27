@@ -1,6 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FireSafetyController;
+use App\Http\Controllers\TyphoonController;
+use App\Http\Controllers\IncidentController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -10,6 +15,21 @@ Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-Auth::routes();
+// Main dashboard
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+// Subsystem dashboards
+Route::prefix('fire-safety')->group(function () {
+    Route::get('/dashboard', [FireSafetyController::class, 'dashboard'])->name('fire-safety.dashboard');
+    // Add other fire-safety routes here
+});
+
+Route::prefix('typhoon')->group(function () {
+    Route::get('/dashboard', [TyphoonController::class, 'dashboard'])->name('typhoon.dashboard');
+    // Add other typhoon routes here
+});
+
+Route::prefix('incidents')->group(function () {
+    Route::get('/dashboard', [IncidentController::class, 'dashboard'])->name('incidents.dashboard');
+    // Add other incident routes here
+});
