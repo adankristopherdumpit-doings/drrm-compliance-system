@@ -27,6 +27,19 @@ Route::prefix('fire-safety')->group(function () {
     Route::get('/buildings', [FireSafetyController::class, 'buildings'])->name('fire-safety.buildings');
     Route::get('/evacuation-plans', [FireSafetyController::class, 'evacuationPlans'])->name('fire-safety.evacuation-plans');
     Route::get('/settings', [FireSafetyController::class, 'settings'])->name('fire-safety.settings');
+
+    // AJAX routes for dynamic loading
+    Route::get('/school/{id}', [FireSafetyController::class, 'getSchoolDetails'])->name('fire-safety.school.details');
+    Route::get('/school/{id}/issues', [FireSafetyController::class, 'getSchoolIssues'])->name('fire-safety.school.issues');
+});
+
+Route::post('/fire-safety/school/store', [FireSafetyController::class, 'storeSchool'])
+    ->name('fire-safety.school.store')
+    ->middleware('auth');
+
+// Add middleware to protect AJAX routes
+Route::middleware(['auth'])->group(function () {
+    // Your AJAX routes here if needed
 });
 
 Route::prefix('typhoon')->group(function () {

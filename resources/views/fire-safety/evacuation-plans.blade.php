@@ -124,10 +124,10 @@
         <div class="container-fluid h-100">
             <div class="row h-100 align-items-center">
                 <div class="col-auto">
-                    <a href="{{ route('fire-safety.dashboard') }}" class="text-white text-decoration-none">
+                    <a href="{{ route('dashboard') }}" class="text-white text-decoration-none">
                         <i class="fas fa-arrow-left me-2"></i>
-                        <i class="fas fa-map-signs me-2"></i>
-                        <span class="fw-bold">Evacuation Plans</span>
+                        <i class="fas fa-fire me-2"></i>
+                        <span class="fw-bold">Fire Safety Checklist System</span>
                     </a>
                 </div>
 

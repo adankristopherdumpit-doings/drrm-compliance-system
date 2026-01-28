@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fire Safety Dashboard - DRRM Compliance</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -262,7 +263,7 @@
                 <button class="btn btn-light btn-sm">
                     <i class="fas fa-plus me-2"></i> Add Inspection
                 </button>
-                <button class="btn btn-light btn-sm">
+                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#alarmInfoModal">
                     <i class="fas fa-bell me-2"></i> Simulate Alarm
                 </button>
             </div>
@@ -348,7 +349,7 @@
 
         <!-- School Safety Status Section -->
         <div class="row">
-            <div class="col-lg-8">
+            <div class="col-lg-12">
                 <div class="card dashboard-card mb-4">
                     <div class="card-header py-3">
                         <h6 class="m-0 fw-bold text-primary">School Safety Status</h6>
@@ -360,132 +361,244 @@
                                     All Schools
                                 </button>
                             </li>
+                            @foreach($schools as $school)
                             <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#san-isidro">
-                                    San Isidro NHS
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#school-{{ $school->id }}">
+                                    {{ $school->name }}
                                 </button>
                             </li>
-                            <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#santa-clara">
-                                    Santa Clara NHS
-                                </button>
-                            </li>
-                            <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tapinac">
-                                    Tapinac ES
-                                </button>
-                            </li>
+                            @endforeach
                         </ul>
-
                         <div class="tab-content mt-3">
+                            <!-- All Schools Tab -->
                             <div class="tab-pane fade show active" id="all">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>School</th>
-                                                <th>Status</th>
-                                                <th>Issues</th>
-                                                <th>Last Inspection</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>San Isidro NHS</td>
-                                                <td><span class="status-badge bg-success">PASSED</span></td>
-                                                <td>None</td>
-                                                <td>2024-01-15</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-eye"></i> View
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Santa Clara NHS</td>
-                                                <td><span class="status-badge bg-danger">FAILED</span></td>
-                                                <td>2 issues found</td>
-                                                <td>2024-01-10</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-warning">
-                                                        <i class="fas fa-edit"></i> Fix Issues
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Tapinac ES</td>
-                                                <td><span class="status-badge bg-warning">WARNING</span></td>
-                                                <td>1 issue found</td>
-                                                <td>2024-01-12</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-info">
-                                                        <i class="fas fa-info-circle"></i> Details
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <div class="row">
+                                    <div class="col-lg-8">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>School</th>
+                                                        <th>Status</th>
+                                                        <th>Issues</th>
+                                                        <th>Last Inspection</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse($schools as $school)
+                                                        <tr>
+                                                            <td>{{ $school->school_name }}</td>
+                                                                <td>
+                                                                    @if($school->status === 'passed')
+                                                                        <span class="status-badge bg-success">PASSED</span>
+                                                                    @elseif($school->status === 'failed')
+                                                                        <span class="status-badge bg-danger">FAILED</span>
+                                                                    @elseif($school->status === 'unconfigured')
+                                                                        <span class="status-badge bg-warning">UNCONFIGURED</span>
+                                                                    @else
+                                                                        <span class="status-badge bg-warning">WARNING</span>
+                                                                    @endif
+                                                                </td>
+                                                            <td>
+                                                                @if($school->status === 'unconfigured')
+                                                                    Setup Needed
+                                                                @elseif ($school->issues_count > 0)
+                                                                    {{$school->issues_count}} issues found
+                                                                @else
+                                                                    None
+                                                                @endif
+                                                            </td>
+                                                            <td>
+                                                                @if($school->last_inspection_date && $school->last_inspection_date !== 'Never')
+                                                                    {{ \Carbon\Carbon::parse($school->last_inspection_date)->format('Y-m-d') }}
+                                                                @else
+                                                                    Never
+                                                                @endif
+                                                            </td>
+                                                            <td>
+                                                                @if($school->status === 'passed')
+                                                                    <button class="btn btn-sm btn-outline-primary view-school-btn"
+                                                                            data-school-id="{{ $school->id }}"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#viewSchoolModal">
+                                                                        <i class="fas fa-eye"></i> View
+                                                                    </button>
+                                                                @else
+                                                                    <button class="btn btn-sm btn-outline-warning details-btn"
+                                                                            data-school-id="{{ $school->id }}"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#issuesModal">
+                                                                        <i class="fas fa-info-circle"></i> Details
+                                                                    </button>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="5" class="text-center text-muted py-4">
+                                                                No schools found. Click "Add Inspection" to add a school.
+                                                            </td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                                                            <!-- Bottom Action Bar -->
+                                    <div class="row mt-4">
+                                        <div class="col-12">
+                                            <div class="card dashboard-card">
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-center gap-3">
+                                                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInspectionModal">
+                                                            <i class="fas fa-plus me-2"></i> Add Inspection
+                                                        </button>
+                                                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#alarmInfoModal">
+                                                            <i class="fas fa-bell me-2"></i> Simulate Alarm
+                                                        </button>
+                                                        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#evacInfoModal">
+                                                            <i class="fas fa-map-signs me-2"></i> View Evacuation Plans
+                                                        </button>
+                                                        <button class="btn btn-success">
+                                                            <i class="fas fa-file-pdf me-2"></i> Generate Report
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <!-- Alerts for All Schools -->
+                                        <div class="card dashboard-card mb-4">
+                                            <div class="card-header py-3 bg-danger text-white">
+                                                <h6 class="m-0 fw-bold">
+                                                    <i class="fas fa-exclamation-circle me-2"></i> Alerts - All Schools
+                                                </h6>
+                                            </div>
+                                            <div class="card-body" id="allAlerts">
+                                                <div class="text-center text-muted py-3">
+                                                    <i class="fas fa-info-circle me-2"></i>
+                                                    Select a school to see alerts
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Events for All Schools -->
+                                        <div class="card dashboard-card">
+                                            <div class="card-header py-3 bg-primary text-white">
+                                                <h6 class="m-0 fw-bold">
+                                                    <i class="fas fa-calendar-alt me-2"></i> Events - All Schools
+                                                </h6>
+                                            </div>
+                                            <div class="card-body" id="allEvents">
+                                                <div class="text-center text-muted py-3">
+                                                    <i class="fas fa-info-circle me-2"></i>
+                                                    Select a school to see events
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <!-- Other tab contents would go here -->
+
+                            <!-- Individual School Tabs -->
+                                @foreach($schools as $school)
+                                <div class="tab-pane fade" id="school-{{ $school->id }}">
+                                    <div class="row">
+                                        <div class="col-lg-8">
+                                            <!-- School-specific data will go here -->
+                                        </div>
+                                        <div class="col-lg-4">
+                                            <!-- Dynamic alerts/events -->
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
                         </div>
                     </div>
                 </div>
             </div>
+        </div> <!-- <- School Safety Status Section -->
 
-            <!-- Right Side Alerts and Events -->
-            <div class="col-lg-4">
-                <!-- Alerts Panel -->
-                <div class="card dashboard-card mb-4">
-                    <div class="card-header py-3 bg-danger text-white">
-                        <h6 class="m-0 fw-bold">
-                            <i class="fas fa-exclamation-circle me-2"></i> Alerts
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-danger alert-dismissible fade show">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            <strong>Fire drill overdue</strong><br>
-                            <small>School 02 - Last drill: 90 days ago</small>
-                        </div>
-                        <div class="alert alert-warning alert-dismissible fade show">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>1 extinguisher expired</strong><br>
-                            <small>Building A, Floor 2</small>
-                        </div>
-                        <div class="alert alert-warning alert-dismissible fade show">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Alarm system not tested this month</strong><br>
-                            <small>Required monthly test overdue</small>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Upcoming Events -->
-                <div class="card dashboard-card">
-                    <div class="card-header py-3 bg-primary text-white">
-                        <h6 class="m-0 fw-bold">
-                            <i class="fas fa-calendar-alt me-2"></i> Upcoming Events
-                        </h6>
+
+        <!-- View School Modal (for PASSED status) -->
+        <div class="modal fade" id="viewSchoolModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="schoolNameTitle">School Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="card-body">
-                        <div class="d-flex mb-3">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-calendar-check text-primary fa-2x"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Inspection</h6>
-                                <p class="text-muted mb-0">Feb 10, 2026 – San Isidro NHS</p>
+                    <div class="modal-body">
+                        <!-- School Information -->
+                        <div class="school-info mb-4">
+                            <h6 class="border-bottom pb-2">School Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>School Name:</strong> <span id="modalSchoolName"></span></p>
+                                    <p><strong>School ID:</strong> <span id="modalSchoolId"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>School Head:</strong> <span id="modalSchoolHead"></span></p>
+                                    <p><strong>DRRM Coordinator:</strong> <span id="modalDrrmCoordinator"></span></p>
+                                </div>
                             </div>
                         </div>
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-calendar-alt text-info fa-2x"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Fire Drill</h6>
-                                <p class="text-muted mb-0">Feb 15, 2026 – Santa Clara NHS</p>
+
+                        <!-- Equipment Summary -->
+                        <div class="equipment-summary">
+                            <h6 class="border-bottom pb-2">Equipment Summary</h6>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h5 id="fireExtinguishersCount">0</h5>
+                                            <p class="mb-0">Fire Extinguishers</p>
+                                            <button class="btn btn-sm btn-link view-equipment"
+                                                    data-type="extinguishers">
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h5 id="alarmSystemsCount">0</h5>
+                                            <p class="mb-0">Alarm Systems</p>
+                                            <button class="btn btn-sm btn-link view-equipment"
+                                                    data-type="alarm-systems">
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h5 id="evacuationPlansCount">0</h5>
+                                            <p class="mb-0">Evacuation Plans</p>
+                                            <button class="btn btn-sm btn-link view-equipment"
+                                                    data-type="evacuation-plans">
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h5 id="buildingsCount">0</h5>
+                                            <p class="mb-0">Buildings</p>
+                                            <button class="btn btn-sm btn-link view-equipment"
+                                                    data-type="buildings">
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -493,25 +606,83 @@
             </div>
         </div>
 
-        <!-- Bottom Action Bar -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card dashboard-card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-center gap-3">
-                            <button class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i> Add Inspection
-                            </button>
-                            <button class="btn btn-warning">
-                                <i class="fas fa-bell me-2"></i> Simulate Alarm
-                            </button>
-                            <button class="btn btn-info">
-                                <i class="fas fa-map-signs me-2"></i> View Evacuation Plans
-                            </button>
-                            <button class="btn btn-success">
-                                <i class="fas fa-file-pdf me-2"></i> Generate Report
-                            </button>
+        <!-- Issues Modal (for FAILED/WARNING status) -->
+        <div class="modal fade" id="issuesModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title">Issues Found</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6 id="issuesSchoolName" class="mb-3"></h6>
+                        <div id="issuesList">
+                            <!-- Issues will be populated here -->
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Add Inspection Modal -->
+        <div class="modal fade" id="addInspectionModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add New School Inspection</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="addSchoolForm" action="{{ route('fire-safety.school.store') }}" method="POST">
+                        @csrf
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label>School Name *</label>
+                                <input type="text" class="form-control" name="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label>School ID *</label>
+                                <input type="text" class="form-control" name="school_id" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label>School Head *</label>
+                                    <input type="text" class="form-control" name="school_head" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label>DRRM Coordinator *</label>
+                                    <input type="text" class="form-control" name="drrm_coordinator" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">Add School</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Alarm Info Modal -->
+        <div class="modal fade" id="alarmInfoModal">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-body text-center">
+                        <i class="fas fa-bell fa-3x text-warning mb-3"></i>
+                        <h5>Alarm Systems</h5>
+                        <p>View and manage all fire alarm systems, test schedules, and maintenance records.</p>
+                        <a href="{{ route('fire-safety.alarm-systems') }}" class="btn btn-warning">Go to Alarm Systems</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evacuation Plans Info Modal -->
+        <div class="modal fade" id="evacInfoModal">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-body text-center">
+                        <i class="fas fa-map-signs fa-3x text-info mb-3"></i>
+                        <h5>Evacuation Plans</h5>
+                        <p>View evacuation routes, assembly points, and emergency procedures.</p>
+                        <a href="{{ route('fire-safety.evacuation-plans') }}" class="btn btn-info">View All Plans</a>
                     </div>
                 </div>
             </div>
@@ -521,37 +692,176 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script>
-        // Mobile sidebar toggle (optional)
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add active class to current nav item
-            const currentPath = window.location.pathname;
-            const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching - load school-specific alerts/events
+    const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const target = this.getAttribute('data-bs-target');
+            const schoolSlug = target.replace('#', '');
 
-            navLinks.forEach(link => {
-                if (link.getAttribute('href') === currentPath) {
-                    link.classList.add('active');
-                }
+            // Remove active from all
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active to clicked
+            this.classList.add('active');
+
+            // Load school data if needed
+            if (schoolSlug !== 'all') {
+                // You can load specific school data here
+                console.log(`Loading data for ${schoolSlug}`);
+            }
+        });
+    });
+
+    // View School Modal Handler
+    document.querySelectorAll('.view-school-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const schoolId = this.getAttribute('data-school-id');
+            loadSchoolDetails(schoolId);
+        });
+    });
+
+    // Issues Modal Handler
+    document.querySelectorAll('.details-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const schoolId = this.getAttribute('data-school-id');
+            loadSchoolIssues(schoolId);
+        });
+    });
+
+    // Equipment View Buttons (in modal)
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('view-equipment')) {
+            const type = e.target.getAttribute('data-type');
+            window.location.href = `/fire-safety/${type}`;
+        }
+    });
+
+    function loadSchoolDetails(schoolId) {
+        fetch(`/fire-safety/school/${schoolId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('modalSchoolName').textContent = data.name;
+                document.getElementById('modalSchoolId').textContent = data.school_id;
+                document.getElementById('modalSchoolHead').textContent = data.school_head;
+                document.getElementById('modalDrrmCoordinator').textContent = data.drrm_coordinator;
+                document.getElementById('fireExtinguishersCount').textContent = data.fire_extinguishers_count;
+                document.getElementById('alarmSystemsCount').textContent = data.alarm_systems_count;
+                document.getElementById('evacuationPlansCount').textContent = data.evacuation_plans_count;
+                document.getElementById('buildingsCount').textContent = data.buildings_count;
+
+                // Update modal title
+                document.getElementById('schoolNameTitle').textContent = `${data.name} Details`;
+            })
+            .catch(error => {
+                console.error('Error loading school details:', error);
+                alert('Failed to load school details. Please try again.');
             });
+    }
 
-            // Simple tab functionality
-            const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
-            tabButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    this.classList.add('active');
+function loadSchoolIssues(schoolId) {
+    fetch(`/fire-safety/school/${schoolId}/issues`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('issuesSchoolName').textContent = data.school_name;
+
+            let issuesHtml = '';
+            if(data.issues.length === 0) {
+                issuesHtml = '<div class="alert alert-success">No issues found!</div>';
+            } else {
+                data.issues.forEach(issue => {
+                    const alertClass = issue.type === 'danger' ? 'alert-danger' : 'alert-warning';
+
+                    if (issue.link) {
+                        // Clickable issue with link
+                        issuesHtml += `
+                            <a href="${issue.link}" class="alert ${alertClass} d-block text-decoration-none" onclick="event.preventDefault(); window.location.href='${issue.link}'">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                <strong>${issue.title}</strong><br>
+                                <small>${issue.description}</small>
+                                <div class="text-end mt-2">
+                                    <span class="badge bg-dark"><i class="fas fa-external-link-alt me-1"></i> Configure</span>
+                                </div>
+                            </a>`;
+                    } else {
+                        // Non-clickable issue
+                        issuesHtml += `
+                            <div class="alert ${alertClass}">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                <strong>${issue.title}</strong><br>
+                                <small>${issue.description}</small>
+                            </div>`;
+                    }
                 });
-            });
+            }
+            document.getElementById('issuesList').innerHTML = issuesHtml;
+        })
+        .catch(error => {
+            console.error('Error loading school issues:', error);
+            // Show a more user-friendly message
+            document.getElementById('issuesList').innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    School configuration setup needed. Please visit each section to configure:
+                    <div class="mt-2">
+                        <a href="/fire-safety/alarm-systems" class="btn btn-sm btn-warning me-2">Alarm Systems</a>
+                        <a href="/fire-safety/extinguishers" class="btn btn-sm btn-danger me-2">Fire Extinguishers</a>
+                        <a href="/fire-safety/buildings" class="btn btn-sm btn-primary me-2">Buildings</a>
+                        <a href="/fire-safety/evacuation-plans" class="btn btn-sm btn-success">Evacuation Plans</a>
+                    </div>
+                </div>`;
+        });
+}
 
-            // Alert dismiss buttons
-            const alerts = document.querySelectorAll('.alert-dismissible');
-            alerts.forEach(alert => {
-                const dismissBtn = document.createElement('button');
-                dismissBtn.className = 'btn-close';
-                dismissBtn.setAttribute('data-bs-dismiss', 'alert');
-                alert.appendChild(dismissBtn);
+    // Initialize with some data
+    const firstTab = document.querySelector('[data-bs-target="#all"]');
+    if (firstTab) {
+        firstTab.click();
+    }
+    // Add School Form Submission
+    const addSchoolForm = document.getElementById('addSchoolForm');
+    if (addSchoolForm) {
+        addSchoolForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    name: this.name.value,
+                    school_id: this.school_id.value,
+                    school_head: this.school_head.value,
+                    drrm_coordinator: this.drrm_coordinator.value
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('School added successfully!');
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addInspectionModal'));
+                    modal.hide();
+                    // Reload page
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to add school. Please try again.');
             });
         });
-    </script>
+    }
+});
+
+</script>
 </body>
 </html>
