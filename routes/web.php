@@ -19,9 +19,14 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 // Subsystem dashboards
+// Fire Safety Routes
 Route::prefix('fire-safety')->group(function () {
     Route::get('/dashboard', [FireSafetyController::class, 'dashboard'])->name('fire-safety.dashboard');
-    // Add other fire-safety routes here
+    Route::get('/alarm-systems', [FireSafetyController::class, 'alarmSystems'])->name('fire-safety.alarm-systems');
+    Route::get('/extinguishers', [FireSafetyController::class, 'extinguishers'])->name('fire-safety.extinguishers');
+    Route::get('/buildings', [FireSafetyController::class, 'buildings'])->name('fire-safety.buildings');
+    Route::get('/evacuation-plans', [FireSafetyController::class, 'evacuationPlans'])->name('fire-safety.evacuation-plans');
+    Route::get('/settings', [FireSafetyController::class, 'settings'])->name('fire-safety.settings');
 });
 
 Route::prefix('typhoon')->group(function () {

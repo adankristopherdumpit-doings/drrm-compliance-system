@@ -37,7 +37,7 @@
                     </div>
                     <div class="card-footer bg-transparent text-center">
                         <span class="btn" style="background-color: #D12428; color: white;">
-                            <i class="fas fa-arrow-right"></i> Enter System
+                            <i class="fas fa-arrow-right"></i> Enter
                         </span>
                     </div>
                 </div>
@@ -59,7 +59,7 @@
                     </div>
                     <div class="card-footer bg-transparent text-center">
                         <span class="btn" style="background-color: #1B4C6D; color: white;">
-                            <i class="fas fa-arrow-right"></i> Enter System
+                            <i class="fas fa-arrow-right"></i> Enter
                         </span>
                     </div>
                 </div>
@@ -81,7 +81,7 @@
                     </div>
                     <div class="card-footer bg-transparent text-center">
                         <span class="btn" style="background-color: #F2C94C; color: #333;">
-                            <i class="fas fa-arrow-right"></i> Enter System
+                            <i class="fas fa-arrow-right"></i> Enter
                         </span>
                     </div>
                 </div>
