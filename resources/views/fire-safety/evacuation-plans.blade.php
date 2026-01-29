@@ -173,6 +173,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="{{ route('fire-safety.buildings') }}">
+                        <span class="nav-icon"><i class="fas fa-building"></i></span>
+                        <span>Buildings</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="{{ route('fire-safety.alarm-systems') }}">
                         <span class="nav-icon"><i class="fas fa-bell"></i></span>
                         <span>Alarm Systems</span>
@@ -182,12 +188,6 @@
                     <a class="nav-link" href="{{ route('fire-safety.extinguishers') }}">
                         <span class="nav-icon"><i class="fas fa-fire-extinguisher"></i></span>
                         <span>Fire Extinguishers</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('fire-safety.buildings') }}">
-                        <span class="nav-icon"><i class="fas fa-building"></i></span>
-                        <span>Buildings</span>
                     </a>
                 </li>
                 <li class="nav-item">

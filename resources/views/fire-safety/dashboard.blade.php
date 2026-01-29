@@ -224,6 +224,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="{{ route('fire-safety.buildings') }}">
+                        <span class="nav-icon"><i class="fas fa-building"></i></span>
+                        <span>Buildings</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="{{ route('fire-safety.alarm-systems') }}">
                         <span class="nav-icon"><i class="fas fa-bell"></i></span>
                         <span>Alarm Systems</span>
@@ -233,12 +239,6 @@
                     <a class="nav-link" href="{{ route('fire-safety.extinguishers') }}">
                         <span class="nav-icon"><i class="fas fa-fire-extinguisher"></i></span>
                         <span>Fire Extinguishers</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('fire-safety.buildings') }}">
-                        <span class="nav-icon"><i class="fas fa-building"></i></span>
-                        <span>Buildings</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -298,7 +298,7 @@
                         <div class="row align-items-center">
                             <div class="col mr-2">
                                 <div class="text-xs fw-bold text-danger text-uppercase mb-1">
-                                    Failed Inspections
+                                    Ongoing Improvement
                                 </div>
                                 <div class="h2 mb-0 fw-bold text-gray-800">0</div>
                             </div>

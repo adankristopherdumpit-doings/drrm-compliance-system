@@ -31,22 +31,48 @@ Route::prefix('fire-safety')->group(function () {
     // AJAX routes for dynamic loading
     Route::get('/school/{id}', [FireSafetyController::class, 'getSchoolDetails'])->name('fire-safety.school.details');
     Route::get('/school/{id}/issues', [FireSafetyController::class, 'getSchoolIssues'])->name('fire-safety.school.issues');
+
+    Route::post('/fire-safety/school/store', [FireSafetyController::class, 'storeSchool'])
+        ->name('fire-safety.school.store')
+        ->middleware('auth');
+
+    // Add middleware to protect AJAX routes
+    Route::middleware(['auth'])->group(function () {
+        // Your AJAX routes here if needed
+    });
+
+    // Alarm System Routes
+    Route::get('/buildings/{schoolId}', [FireSafetyController::class, 'getBuildings']);
+    Route::get('/alarm/{id}', [FireSafetyController::class, 'getAlarm']);
+    Route::post('/alarm/store', [FireSafetyController::class, 'storeAlarm'])->name('fire-safety.alarm.store');
+    Route::put('/alarm/{id}', [FireSafetyController::class, 'updateAlarm']);
+    Route::post('/alarm/{id}/test', [FireSafetyController::class, 'testAlarm']);
+    Route::delete('/alarm/{id}', [FireSafetyController::class, 'destroyAlarm']);
+    Route::get('/check-alarm-code/{code}', [FireSafetyController::class, 'checkAlarmCode']);
+
+    // Building Routes
+    Route::get('/building/{id}', [FireSafetyController::class, 'getBuilding']);
+    Route::post('/building/store', [FireSafetyController::class, 'storeBuilding'])->name('fire-safety.building.store');
+    Route::get('/inspections/{schoolId}', [FireSafetyController::class, 'getInspections']);
+    Route::get('/compliance-stats/{schoolId}', [FireSafetyController::class, 'getComplianceStats']);
+    Route::get('/sidebar-stats/{schoolId}', [FireSafetyController::class, 'getSidebarStats']);
+    Route::get('/buildings-list/{schoolId}', [FireSafetyController::class, 'getBuildingsList']);
+    Route::post('/inspection/schedule', [FireSafetyController::class, 'scheduleInspection'])->name('fire-safety.inspection.schedule');
 });
 
-Route::post('/fire-safety/school/store', [FireSafetyController::class, 'storeSchool'])
-    ->name('fire-safety.school.store')
-    ->middleware('auth');
 
-// Add middleware to protect AJAX routes
-Route::middleware(['auth'])->group(function () {
-    // Your AJAX routes here if needed
-});
 
+//Typhoon/Flood Routes
 Route::prefix('typhoon')->group(function () {
     Route::get('/dashboard', [TyphoonController::class, 'dashboard'])->name('typhoon.dashboard');
     // Add other typhoon routes here
 });
 
+
+
+
+
+//Incident Routes
 Route::prefix('incidents')->group(function () {
     Route::get('/dashboard', [IncidentController::class, 'dashboard'])->name('incidents.dashboard');
     // Add other incident routes here
