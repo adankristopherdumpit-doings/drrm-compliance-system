@@ -9,9 +9,11 @@ use App\Models\FireSafetyAlarmSystem;
 use App\Models\FireSafetyBuilding;
 use App\Models\FireSafetyEvacuationPlan;
 use App\Models\FireSafetyInspection;
+use App\Models\FireSafetyRoom;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class FireSafetyController extends Controller
 {
@@ -211,7 +213,191 @@ class FireSafetyController extends Controller
 
     public function extinguishers()
     {
-        return view('fire-safety.extinguishers');
+        $schools = FireSafetySchool::with([
+            'buildings',
+            'buildings.rooms',
+            'buildings.fireExtinguishers.centerRoom',
+            'buildings.fireExtinguishers.coveredRooms',
+        ])->get();
+
+        return view('fire-safety.extinguishers', [
+            'schools' => $schools
+        ]);
+    }
+
+    // Get rooms for a building (AJAX)
+    public function getRooms($buildingId)
+    {
+        $rooms = FireSafetyRoom::where('building_id', $buildingId)
+            ->orderBy('floor_no')
+            ->orderBy('room_name')
+            ->get();
+
+        return response()->json($rooms);
+    }
+
+    // Store a room (AJAX)
+    public function storeRoom(Request $request)
+    {
+        $validated = $request->validate([
+            'school_id' => 'required|exists:firesafety_school_information,id',
+            'building_id' => 'required|exists:firesafety_buildings,id',
+            'room_code' => 'nullable|string|max:50',
+            'room_name' => 'required|string|max:120',
+            'room_type' => 'required|in:classroom,laboratory,auxiliary,office,storage,others',
+            'floor_no' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        // Ensure building belongs to school
+        $building = FireSafetyBuilding::where('id', $validated['building_id'])
+            ->where('school_id', $validated['school_id'])
+            ->first();
+        if (!$building) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Building does not belong to the selected school.'
+            ], 422);
+        }
+
+        $room = FireSafetyRoom::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Room added successfully!',
+            'room' => $room
+        ]);
+    }
+
+    // Store extinguisher (AJAX) - room-based coverage rules enforced here
+    public function storeExtinguisher(Request $request)
+    {
+        $validated = $request->validate([
+            'school_id' => 'required|exists:firesafety_school_information,id',
+            'building_id' => 'required|exists:firesafety_buildings,id',
+            'code' => 'required|string|max:50',
+            'status' => 'required|in:active,expired,maintenance,missing',
+            'date_checked' => 'required|date',
+            'evaluation_result' => 'required|string|max:255',
+            'room_id' => 'required|exists:fire_safety_rooms,id', // center room
+            'covered_room_ids' => 'required|array|min:1|max:3',
+            'covered_room_ids.*' => 'integer|exists:fire_safety_rooms,id',
+        ]);
+
+        // Ensure building belongs to school
+        $building = FireSafetyBuilding::where('id', $validated['building_id'])
+            ->where('school_id', $validated['school_id'])
+            ->first();
+        if (!$building) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Building does not belong to the selected school.'
+            ], 422);
+        }
+
+        $centerRoom = FireSafetyRoom::where('id', $validated['room_id'])
+            ->where('building_id', $validated['building_id'])
+            ->where('school_id', $validated['school_id'])
+            ->first();
+        if (!$centerRoom) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Center room does not belong to the selected building/school.'
+            ], 422);
+        }
+
+        $coveredRoomIds = array_values(array_unique($validated['covered_room_ids']));
+
+        // Center room must be included
+        if (!in_array((int) $validated['room_id'], array_map('intval', $coveredRoomIds), true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Covered rooms must include the center room.'
+            ], 422);
+        }
+
+        // Validate all covered rooms belong to same building/school
+        $coveredRooms = FireSafetyRoom::whereIn('id', $coveredRoomIds)
+            ->where('building_id', $validated['building_id'])
+            ->where('school_id', $validated['school_id'])
+            ->get();
+        if ($coveredRooms->count() !== count($coveredRoomIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'All covered rooms must belong to the selected building and school.'
+            ], 422);
+        }
+
+        // Laboratory rule: lab can only share with ONE auxiliary room (total 2 rooms)
+        if ($centerRoom->room_type === 'laboratory' && count($coveredRoomIds) > 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Laboratory center room can cover only itself, or itself + 1 auxiliary room.'
+            ], 422);
+        }
+        if ($centerRoom->room_type === 'laboratory' && count($coveredRoomIds) === 2) {
+            $otherRoom = $coveredRooms->firstWhere('id', '!=', $centerRoom->id);
+            if (!$otherRoom || $otherRoom->room_type !== 'auxiliary') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Laboratory can only share with an auxiliary room.'
+                ], 422);
+            }
+        }
+
+        // Enforce "1 extinguisher per room" coverage (no duplicate coverage)
+        $alreadyCovered = DB::table('fire_safety_extinguisher_room_coverage')
+            ->whereIn('room_id', $coveredRoomIds)
+            ->pluck('room_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (!empty($alreadyCovered)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'One or more selected rooms already have an extinguisher assigned.'
+            ], 422);
+        }
+
+        // Ensure code is unique within the same school (simple constraint at app level)
+        $codeExists = FireSafetyExtinguisher::where('school_id', $validated['school_id'])
+            ->where('code', $validated['code'])
+            ->exists();
+        if ($codeExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Extinguisher code already exists for this school.'
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $ext = FireSafetyExtinguisher::create([
+                'school_id' => $validated['school_id'],
+                'building_id' => $validated['building_id'],
+                'room_id' => $validated['room_id'],
+                'code' => $validated['code'],
+                'status' => $validated['status'],
+                'date_checked' => $validated['date_checked'],
+                'evaluation_result' => $validated['evaluation_result'],
+            ]);
+
+            $ext->coveredRooms()->sync($coveredRoomIds);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Extinguisher added successfully!',
+                'extinguisher_id' => $ext->id
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error storing extinguisher: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add extinguisher: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function buildings()
@@ -381,6 +567,51 @@ class FireSafetyController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Inspection scheduled successfully!'
+        ]);
+    }
+
+    // Get inspection details (AJAX) - used by Buildings page
+    public function getInspection($id)
+    {
+        try {
+            $inspection = FireSafetyInspection::with(['building', 'school'])->findOrFail($id);
+            return response()->json($inspection);
+        } catch (\Exception $e) {
+            Log::error('Error getting inspection: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Inspection not found',
+                'message' => $e->getMessage()
+            ], 404);
+        }
+    }
+
+    // Cancel inspection (AJAX) - used by Buildings page
+    public function cancelInspection($id)
+    {
+        try {
+            $inspection = FireSafetyInspection::findOrFail($id);
+            $inspection->status = 'cancelled';
+            $inspection->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Inspection cancelled successfully!'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error cancelling inspection: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel inspection: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Placeholder checklist page to prevent 404 (until checklist UI is implemented)
+    public function inspectionChecklist($id)
+    {
+        $inspection = FireSafetyInspection::with(['building', 'school'])->findOrFail($id);
+        return view('fire-safety.inspection-checklist', [
+            'inspection' => $inspection
         ]);
     }
     public function evacuationPlans()

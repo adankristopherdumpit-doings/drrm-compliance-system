@@ -40,4 +40,9 @@ class FireSafetyBuilding extends Model
         // You'll need to create this relationship when you make the extinguisher model
         return $this->hasMany(FireSafetyExtinguisher::class, 'building_id');
     }
+
+    public function rooms(): HasMany
+    {
+        return $this->hasMany(FireSafetyRoom::class, 'building_id');
+    }
 }

@@ -10,7 +10,8 @@ class FireSafetyExtinguisher extends Model
 
     protected $fillable = [
         'school_id',
-        'building_id',  // Add this
+        'building_id',
+        'room_id', // center room
         'code',
         'status',
         'date_checked',
@@ -26,5 +27,20 @@ class FireSafetyExtinguisher extends Model
     public function school()
     {
         return $this->belongsTo(FireSafetySchool::class, 'school_id');
+    }
+
+    public function centerRoom()
+    {
+        return $this->belongsTo(FireSafetyRoom::class, 'room_id');
+    }
+
+    public function coveredRooms()
+    {
+        return $this->belongsToMany(
+            FireSafetyRoom::class,
+            'fire_safety_extinguisher_room_coverage',
+            'extinguisher_id',
+            'room_id'
+        )->withTimestamps();
     }
 }

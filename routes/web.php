@@ -58,6 +58,16 @@ Route::prefix('fire-safety')->group(function () {
     Route::get('/sidebar-stats/{schoolId}', [FireSafetyController::class, 'getSidebarStats']);
     Route::get('/buildings-list/{schoolId}', [FireSafetyController::class, 'getBuildingsList']);
     Route::post('/inspection/schedule', [FireSafetyController::class, 'scheduleInspection'])->name('fire-safety.inspection.schedule');
+
+    // Inspection Routes (used by Buildings page JS)
+    Route::get('/inspection/{id}', [FireSafetyController::class, 'getInspection'])->name('fire-safety.inspection.show');
+    Route::post('/inspection/{id}/cancel', [FireSafetyController::class, 'cancelInspection'])->name('fire-safety.inspection.cancel');
+    Route::get('/inspection/{id}/checklist', [FireSafetyController::class, 'inspectionChecklist'])->name('fire-safety.inspection.checklist');
+
+    // Room-based Fire Extinguisher Routes (AJAX)
+    Route::get('/rooms/{buildingId}', [FireSafetyController::class, 'getRooms'])->name('fire-safety.rooms.list');
+    Route::post('/room/store', [FireSafetyController::class, 'storeRoom'])->name('fire-safety.room.store');
+    Route::post('/extinguisher/store', [FireSafetyController::class, 'storeExtinguisher'])->name('fire-safety.extinguisher.store');
 });
 
 
