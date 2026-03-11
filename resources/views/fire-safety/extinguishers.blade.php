@@ -902,6 +902,7 @@
                                 <select class="form-select" name="floor_no" id="roomFloorSelect" required disabled>
                                     <option value="">Select Building First</option>
                                 </select>
+                                <small id="roomFloorGuidance" class="text-warning d-none">Do one room per floor first</small>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold small text-muted text-uppercase">Room Code</label>
@@ -1350,8 +1351,10 @@
         // Named function for room floor population so it can be called/awaited explicitly
         async function updateRoomFloors(buildingId) {
             const floorSelect = document.getElementById('roomFloorSelect');
+            const floorGuidance = document.getElementById('roomFloorGuidance');
             floorSelect.innerHTML = '<option value="">Select Floor</option>';
             floorSelect.disabled = true;
+            if (floorGuidance) floorGuidance.classList.add('d-none');
 
             if (!buildingId) return;
 
@@ -1408,6 +1411,14 @@
                 const floorsWithRooms = Object.keys(roomsByFloor).filter(f => roomsByFloor[f] > 0).length;
                 const floorsWithoutRooms = totalFloors - floorsWithRooms;
 
+                if (floorGuidance) {
+                    if (floorsWithoutRooms > 0) {
+                        floorGuidance.classList.remove('d-none');
+                    } else {
+                        floorGuidance.classList.add('d-none');
+                    }
+                }
+
                 if (totalRequiredRooms > 0 && remainingSlots <= 0) {
                     Swal.fire('Limit Reached', 'No more rooms can be added without violating building room limit.', 'warning');
                     floorSelect.disabled = true;
@@ -1419,10 +1430,9 @@
                     candidateFloors = Array.from({ length: totalFloors }, (_, idx) => idx + 1)
                         .filter(floorNo => (roomsByFloor[floorNo] || 0) === 0);
                 } else {
-                    // Keep floor distribution stable once all floors already have at least one room.
-                    const minCount = Math.min(...Object.values(roomsByFloor));
-                    candidateFloors = Array.from({ length: totalFloors }, (_, idx) => idx + 1)
-                        .filter(floorNo => (roomsByFloor[floorNo] || 0) === minCount);
+                    // Once every floor has at least one room, allow manual floor choice
+                    // so users can continue encoding in chronological order.
+                    candidateFloors = Array.from({ length: totalFloors }, (_, idx) => idx + 1);
                 }
 
                 for (const i of candidateFloors) {

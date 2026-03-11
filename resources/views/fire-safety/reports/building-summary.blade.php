@@ -109,13 +109,13 @@
                 <h2 style="margin: 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">DepEd DRRM</h2>
             </div>
         </div>
-        
+
         <!-- Main Title (centered) -->
         <div style="width: 100%; text-align: center;">
             <h1 style="margin: 0; font-size: 14px; font-weight: normal; text-transform: uppercase;">School's Summarization of Fire Safety – Buildings</h1>
         </div>
     </div>
-    
+
     <div class="info-grid">
         <div class="info-item"><strong>Name of School:</strong> {{ $school->school_name }}</div>
         <div class="info-item"><strong>Name of School Head:</strong> {{ $school->school_head }}</div>
@@ -145,45 +145,45 @@
             @foreach($school->buildings as $building)
                 @php
                     $rooms = $building->actualRooms;
-                    
+
                     // Count classrooms - looking for room_type = 'classroom' or room types with 'classroom' in name
                     $classrooms = $rooms->filter(function($room) {
-                        return strtolower($room->room_type) === 'classroom' || 
+                        return strtolower($room->room_type) === 'classroom' ||
                                (isset($room->roomTypeConfig->name) && stripos($room->roomTypeConfig->name, 'classroom') !== false);
                     })->count();
-                    
+
                     // Count laboratories - looking for room_type = 'laboratory' or room types with 'lab' in name
                     $laboratories = $rooms->filter(function($room) {
-                        return strtolower($room->room_type) === 'laboratory' || 
+                        return strtolower($room->room_type) === 'laboratory' ||
                                (isset($room->roomTypeConfig->name) && stripos($room->roomTypeConfig->name, 'lab') !== false);
                     })->count();
-                    
+
                     // Count administrative rooms - looking for room_type = 'office' or 'administrative' or room types with 'office' or 'admin' in name
                     $adminRooms = $rooms->filter(function($room) {
                         $typeName = strtolower($room->room_type ?? '');
                         $configName = isset($room->roomTypeConfig->name) ? strtolower($room->roomTypeConfig->name) : '';
-                        return strpos($typeName, 'administration') !== false || 
+                        return strpos($typeName, 'administration') !== false ||
                                strpos($typeName, 'office') !== false ||
-                               strpos($typeName, 'administrative') !== false || 
+                               strpos($typeName, 'administrative') !== false ||
                                strpos($configName, 'administration') !== false ||
                                strpos($configName, 'office') !== false ||
                                strpos($configName, 'admin') !== false;
                     });
                     $offices = $adminRooms->count();
-                    
+
                     // Count rooms without secondary exit using room-level flag
                     $roomsWithoutSecondaryExit = $rooms->filter(function($room) {
                         return !$room->has_secondary_exit || $room->has_secondary_exit == '0';
                     })->count();
-                    
+
                     // Get required fire extinguishers
                     $requiredExtinguishers = $building->required_extinguishers ?? $building->requiredExtinguishersCount;
-                    
+
                     // Processing Extinguishers
                     $allExtinguishers = $building->fireExtinguishers;
                     $activeCount = 0;
                     $extinguisherIssues = [];
-                    
+
                     foreach($allExtinguishers as $ext) {
                         $status = strtolower($ext->status ?? '');
                         if (in_array($status, ['active', 'ok', 'operational', 'okay'])) {
@@ -195,59 +195,59 @@
                                 'maintenance', 'refill' => 'FR',
                                 'decommissioned', 'broken' => 'DC',
                                 'missing' => 'MS',
-                                'expired' => 'FR', 
+                                'expired' => 'FR',
                                 default => 'FR'
                             };
                             $extinguisherIssues[] = $ext->code . ' ' . $code;
                         }
                     }
-                    
+
                     // Extinguisher Column Logic
-                    $extinguisherBg = ($activeCount >= $requiredExtinguishers) ? '#90EE90' : '#e20707'; 
+                    $extinguisherBg = ($activeCount >= $requiredExtinguishers) ? '#90EE90' : '#e20707';
                     $extinguisherContent = empty($extinguisherIssues) ? $activeCount : implode(', ', $extinguisherIssues);
 
                     // Secondary Exit Logic for 2-4 Storey
                     $secExitBg = '';
                     $secExitContent = 'N/A';
-                    
+
                     if ($building->floors >= 2 && $building->floors <= 4) {
                         // Interpret emergency_exits status:
                         // 0 = N/A, 1 = No, 2+ = Yes
                         if (($building->emergency_exits ?? 0) >= 2) {
                             $secExitContent = 'Yes';
-                            $secExitBg = '#90EE90'; 
+                            $secExitBg = '#90EE90';
                         } else {
                             $secExitContent = 'No';
-                            $secExitBg = '#e20707'; 
+                            $secExitBg = '#e20707';
                         }
                     }
-                    
+
                     // Alarms Logic
                     $alarms = $building->alarmSystemsMany;
                     if ($alarms->isEmpty()) {
                          $alarms = $building->alarmSystems;
                     }
-                    
+
                     $alarmBg = '#e20707'; // Default Red (Missing)
                     $alarmContentParts = [];
                     $hasBroken = false;
                     $hasMulti = false;
                     $hasAlarm = false;
-                    
+
                     if ($alarms->count() > 0) {
                         $hasAlarm = true;
                         foreach($alarms as $alarm) {
                             $status = strtolower($alarm->status ?? '');
                             $isFunctional = in_array($status, ['active', 'functional', 'ok', 'online']);
-                            
+
                             if (!$isFunctional) {
                                 $hasBroken = true;
                             }
-                            
+
                             if ($alarm->buildings->count() > 1) {
                                 $hasMulti = true;
                             }
-                            
+
                             $typeChar = 'O';
                             if (stripos($alarm->alarm_type, 'Bell') !== false) $typeChar = 'B';
                             elseif (stripos($alarm->alarm_type, 'Mechanical') !== false) $typeChar = 'M';
@@ -255,10 +255,10 @@
                             else {
                                 $typeChar = strtoupper(substr($alarm->alarm_type, 0, 2));
                             }
-                            
+
                             $alarmContentParts[] = $alarm->code . ' ' . $typeChar;
                         }
-                        
+
                         if ($hasBroken) {
                             $alarmBg = '#add8e6'; // Blue (Existing but bad status)
                         } elseif ($hasMulti) {
@@ -269,13 +269,13 @@
                     } else {
                          $alarmBg = '#e20707'; // Red (Missing)
                     }
-                    
+
                     $alarmContent = $hasAlarm ? implode(', ', $alarmContentParts) : '';
 
                     // Smoke Detector Logic for Administrative/Office Rooms
                     $adminRoomsCount = $adminRooms->count();
                     $smokeDetectorCount = $adminRooms->where('has_smoke_detector', true)->count();
-                    
+
                     if ($adminRoomsCount === 0) {
                         $smokeDetectorContent = 'N/A';
                         $smokeDetectorBg = '';

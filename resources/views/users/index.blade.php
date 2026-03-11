@@ -153,8 +153,8 @@
                                         <i class="fas fa-tasks"></i>
                                     </button>
                                     @if($user->id !== auth()->id())
-                                    <button class="btn btn-sm {{ $user->is_active ? 'btn-outline-warning' : 'btn-outline-info' }}" 
-                                            onclick="toggleUserStatus({{ $user->id }}, {{ $user->is_active ? 'true' : 'false' }})" 
+                                    <button class="btn btn-sm {{ $user->is_active ? 'btn-outline-warning' : 'btn-outline-info' }}"
+                                            onclick="toggleUserStatus({{ $user->id }}, {{ $user->is_active ? 'true' : 'false' }})"
                                             title="{{ $user->is_active ? 'Deactivate' : 'Activate' }}">
                                         <i class="fas {{ $user->is_active ? 'fa-user-slash' : 'fa-user-check' }}"></i>
                                     </button>
@@ -288,7 +288,7 @@
                 <input type="hidden" name="user_id" id="assignUserId">
                 <div class="modal-body">
                     <p class="mb-3">Select WHICH compliance systems <strong id="assignUserName"></strong> can see and assign a school if applicable.</p>
-                    
+
                     <div class="list-group">
                         <!-- Fire Safety -->
                         <div class="list-group-item">
@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const userId = document.getElementById('assignUserId').value;
                 const modules = [];
                 this.querySelectorAll('input[name="modules[]"]:checked').forEach(c => modules.push(c.value));
-                
+
                 const data = {
                     modules: modules,
                     school_id: formData.get('school_id')
@@ -600,7 +600,7 @@ function editUser(userId) {
             if (nameInput) nameInput.value = user.name;
             if (emailInput) emailInput.value = user.email;
             if (roleSelect) roleSelect.value = user.role;
-            
+
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         })
@@ -636,7 +636,7 @@ function assignAccess(userId) {
 
             if (userIdInput) userIdInput.value = user.id;
             if (userNameSpan) userNameSpan.textContent = user.name;
-            
+
             const isAdmin = user.role === 'admin';
             const saveBtn = modalEl.querySelector('button[type="submit"]');
 
@@ -649,7 +649,7 @@ function assignAccess(userId) {
                     c.checked = false;
                     c.disabled = false;
                 }
-                
+
                 const schoolDivId = 'school' + c.id.replace('check', '');
                 const schoolDiv = document.getElementById(schoolDivId);
                 if (schoolDiv) {

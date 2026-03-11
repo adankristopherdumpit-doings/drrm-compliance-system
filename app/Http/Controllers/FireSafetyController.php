@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 
@@ -341,7 +342,7 @@ class FireSafetyController extends Controller
 
             // Format status (convert to lowercase with underscores)
             $validated['status'] = strtolower(str_replace(' ', '_', $validated['status']));
-            
+
             if (empty($validated['location'])) {
                 $validated['location'] = 'Not Specified';
             }
@@ -445,7 +446,7 @@ class FireSafetyController extends Controller
         ];
         $originalStatus = strtolower(str_replace(' ', '_', $validated['status']));
         $validated['status'] = $statusMap[$originalStatus] ?? $originalStatus;
-        
+
         if (empty($validated['location'])) {
             $validated['location'] = 'Not Specified';
         }
@@ -556,7 +557,7 @@ class FireSafetyController extends Controller
         }
 
         $schools = $query->get();
-        
+
         // Pre-load recent updates for each school to avoid "Loading..." state on page load
         foreach ($schools as $school) {
             $school->recent_inspections_data = FireSafetyExtinguisherInspection::whereHas('extinguisher', function($q) use ($school) {
@@ -602,8 +603,8 @@ class FireSafetyController extends Controller
 
         $rooms->map(function($r) {
             $priority = $r->roomTypeConfig?->parent;
-            $r->max_rooms = ($priority && $priority->config_type === 'calculated_priority') 
-                ? (int)($priority->max_rooms_covered ?? 3) 
+            $r->max_rooms = ($priority && $priority->config_type === 'calculated_priority')
+                ? (int)($priority->max_rooms_covered ?? 3)
                 : (in_array(strtolower($r->room_type), ['classroom', 'department', 'library']) ? 3 : 2);
             return $r;
         });
@@ -1432,8 +1433,8 @@ public function storeRoom(Request $request)
             // Get room details with coverage status
             $rooms = $building->actualRooms->map(function($room) use ($coveredRoomIds, $hostRoomIds, $coveringMap) {
                 $priority = $room->roomTypeConfig?->parent;
-                $maxLimit = ($priority && $priority->config_type === 'calculated_priority') 
-                    ? (int)($priority->max_rooms_covered ?? 3) 
+                $maxLimit = ($priority && $priority->config_type === 'calculated_priority')
+                    ? (int)($priority->max_rooms_covered ?? 3)
                     : (in_array(strtolower($room->room_type), ['classroom', 'department', 'library']) ? 3 : 2);
 
                 $priorityLabel = $priority?->name ?? $room->calculated_priority_label ?? null;
@@ -2197,7 +2198,7 @@ public function storeRoom(Request $request)
 
             // Cascade deletes manually to be safe
             $building->alarmSystems()->delete();
-            
+
             $rooms = FireSafetyRoom::where('building_id', $building->id)->get();
             foreach ($rooms as $room) {
                FireSafetyExtinguisher::where('room_id', $room->id)->delete();
@@ -2487,7 +2488,7 @@ public function storeRoom(Request $request)
         }
 
         $inspection = FireSafetyInspection::findOrFail($id);
-        
+
         if (auth()->user()->role !== 'admin' && (int)$inspection->school_id !== (int)auth()->user()->school_id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this inspection.'], 403);
         }
@@ -2881,6 +2882,10 @@ public function storeRoom(Request $request)
 
     public function scheduleDrill(Request $request)
     {
+        if (!Schema::hasTable('fire_safety_evacuation_drills') || !Schema::hasTable('fire_safety_drill_building')) {
+            return response()->json(['success' => false, 'message' => 'Evacuation drills module is disabled.'], 410);
+        }
+
         if (auth()->user()->role === 'viewer') {
             return response()->json(['success' => false, 'message' => 'Viewers cannot schedule drills.'], 403);
         }
@@ -2916,12 +2921,20 @@ public function storeRoom(Request $request)
 
     public function getDrill($id)
     {
+        if (!Schema::hasTable('fire_safety_evacuation_drills') || !Schema::hasTable('fire_safety_drill_building')) {
+            return response()->json(['success' => false, 'message' => 'Evacuation drills module is disabled.'], 410);
+        }
+
         $drill = FireSafetyEvacuationDrill::with('buildings')->findOrFail($id);
         return response()->json($drill);
     }
 
     public function cancelDrill($id)
     {
+        if (!Schema::hasTable('fire_safety_evacuation_drills') || !Schema::hasTable('fire_safety_drill_building')) {
+            return response()->json(['success' => false, 'message' => 'Evacuation drills module is disabled.'], 410);
+        }
+
         if (auth()->user()->role === 'viewer') {
             return response()->json(['success' => false, 'message' => 'Viewers cannot cancel drills.'], 403);
         }
@@ -2994,6 +3007,10 @@ public function storeRoom(Request $request)
 
     public function getDrillHistory($schoolId)
     {
+        if (!Schema::hasTable('fire_safety_evacuation_drills')) {
+            return response()->json([]);
+        }
+
         $drills = FireSafetyEvacuationDrill::where('school_id', $schoolId)
             ->orderBy('drill_date', 'desc')
             ->limit(10)
@@ -3705,8 +3722,6 @@ public function storeRoom(Request $request)
             'firesafety_evacuationplans',
             // Related
             'fire_safety_inspections',
-            'fire_safety_evacuation_drills',
-            'fire_safety_drill_building',
             'fire_safety_alarm_building',
             'fire_safety_extinguisher_room_coverage',
             // Config + archives
