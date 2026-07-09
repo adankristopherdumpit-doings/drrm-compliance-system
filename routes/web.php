@@ -9,6 +9,8 @@ use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\ComprehensiveSchoolSafetyController;
 use App\Http\Controllers\HazardMappingController;
 use App\Http\Controllers\DatabaseBackupController;
+use App\Http\Controllers\InventoryStorageController;
+use App\Http\Controllers\DrillMonitoringController;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -96,6 +98,12 @@ Route::prefix('fire-safety')->middleware(['auth', 'module.access:fire_safety'])-
     Route::put('/facilities/{facilityId}', [FireSafetyController::class, 'updateSharedFacility'])->name('fire-safety.facilities.update');
     Route::delete('/facilities/{facilityId}', [FireSafetyController::class, 'deleteSharedFacility'])->name('fire-safety.facilities.delete');
 
+    //Dropdown
+    // In routes/api.php (do NOT include the '/api' prefix here, Laravel adds it automatically)
+Route::get('/firesafety-buildings/{building_id}/rooms', [FireSafetyController::class, 'getRooms']);
+
+
+    
     // Drill routes
     Route::get('/drill-history/{schoolId}', [FireSafetyController::class, 'getDrillHistory']);
     Route::get('/drill-buildings/{schoolId}', [FireSafetyController::class, 'getDrillBuildings']);
@@ -243,6 +251,8 @@ Route::prefix('typhoon')->middleware(['auth', 'module.access:typhoon_flood'])->g
     Route::post('/notifications/{id}/mark-read', [TyphoonController::class, 'markNotificationRead'])->name('typhoon.notification.mark-read');
     Route::post('/notifications/mark-all-read', [TyphoonController::class, 'markAllNotificationsRead'])->name('typhoon.notifications.mark-all-read');
     Route::post('/announcements', [TyphoonController::class, 'storeAnnouncement'])->name('typhoon.announcements.store');
+    
+
     // Add other typhoon routes here
 });
 
@@ -320,10 +330,37 @@ Route::prefix('comprehensive-school-safety')
         Route::get('/schools/{schoolId}/reports/assessment-print', [ComprehensiveSchoolSafetyController::class, 'printAssessmentReport'])->name('school.reports.assessment-print');
         Route::get('/schools/{schoolId}/reports/safety-index-print', [ComprehensiveSchoolSafetyController::class, 'printSafetyIndexReport'])->name('school.reports.safety-index-print');
         Route::get('/schools/{schoolId}/reports/timeline-print', [ComprehensiveSchoolSafetyController::class, 'printTimelineReport'])->name('school.reports.timeline-print');
-        Route::get('/schools/{schoolId}/storage', [ComprehensiveSchoolSafetyController::class, 'schoolStorage'])->name('school.storage');
-        Route::post('/schools/{schoolId}/storage', [ComprehensiveSchoolSafetyController::class, 'storeStorageItem'])->name('school.storage.store');
-        Route::put('/schools/{schoolId}/storage/{storageId}', [ComprehensiveSchoolSafetyController::class, 'updateStorageItem'])->name('school.storage.update');
-        Route::delete('/schools/{schoolId}/storage/{storageId}', [ComprehensiveSchoolSafetyController::class, 'destroyStorageItem'])->name('school.storage.destroy');
+    });
+
+// Drill Monitoring Routes
+Route::prefix('drill-monitoring')
+    ->name('drill-monitoring.')
+    ->middleware(['auth', 'module.access:drill_monitoring'])
+    ->group(function () {
+        Route::get('/dashboard', [DrillMonitoringController::class, 'dashboard'])->name('dashboard');
+        Route::get('/notifications', [DrillMonitoringController::class, 'notifications'])->name('notifications');
+        Route::get('/{id}', [DrillMonitoringController::class, 'show'])->name('show');
+        Route::post('/store', [DrillMonitoringController::class, 'store'])->name('store');
+        Route::put('/update/{id}', [DrillMonitoringController::class, 'update'])->name('update');
+        Route::delete('/{id}', [DrillMonitoringController::class, 'destroy'])->name('destroy');
+        Route::post('/drill-monitoring', [DrillMonitoringController::class, 'store'])->name('drill-monitoring.store');
+        Route::get('/drill-monitoring/inspection/checklist/{id}', [DrillMonitoringController::class, 'inspectionChecklist'])->name('DrillMonitoring.inspection.checklist');
+        Route::get('/inspection/checklist/{id}', [DrillMonitoringController::class, 'inspectionChecklist'])->name('inspection.checklist');
+
+
+        Route::get('/inspection/{id}', [FireSafetyController::class, 'getInspection'])->name('fire-safety.inspection.show');
+        Route::post('/inspection/store', [FireSafetyController::class, 'storeInspection'])->name('fire-safety.inspection.store');
+        Route::put('/inspection/{id}/update', [FireSafetyController::class, 'updateInspection'])->name('fire-safety.inspection.update');
+        Route::get('/inspection/{id}/checklist', [FireSafetyController::class, 'inspectionChecklist'])->name('fire-safety.inspection.checklist');
+
+
+// Clean explicit route for the report layout
+        Route::get('monitoring-tool/{id}', [DrillMonitoringController::class, 'printInspection'])->name('drill-monitoring.print.monitoring-tool');
+
+
+
+// This defines the route name that your form is looking for
+        Route::post('/drill-monitoring/auto-store', [DrillMonitoringController::class, 'autoStoreByDate'])->name('drill-monitoring.auto-store');
     });
 
 // Hazard Mapping Routes
@@ -335,5 +372,28 @@ Route::prefix('hazard-mapping')
         Route::get('/schools/{schoolId}/floor/{floorId}/edit', [HazardMappingController::class, 'editFloor'])->name('school.floor.edit');
         Route::put('/schools/{schoolId}/floor/{floorId}', [HazardMappingController::class, 'updateFloor'])->name('school.floor.update');
         Route::post('/schools/{schoolId}/floor/add', [HazardMappingController::class, 'addFloor'])->name('school.floor.add');
+        
     });
 
+// Damage reports routes
+
+// Inventory Management Routes
+Route::prefix('inventory-storage')
+    ->name('inventory-storage.')
+    ->middleware(['auth', 'module.access:inventory_storage'])
+    ->group(function () {
+        Route::get('/dashboard', [InventoryStorageController::class, 'dashboard'])->name('dashboard');
+        Route::post('/store', [InventoryStorageController::class, 'store'])->name('store');
+        Route::put('/update/{id}', [InventoryStorageController::class, 'update'])->name('update');
+
+
+        Route::get('/default-list', [InventoryStorageController::class, 'defaultList'])->name('default-list');
+
+    
+    Route::post('/default-list', [InventoryStorageController::class, 'storeDefaultList'])
+        ->name('default-list.store');
+
+        Route::get('/inventory-storage', [InventoryStorageController::class, 'dashboard'])
+    ->name('inventory-storage.dashboard');
+
+    });

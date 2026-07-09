@@ -27,7 +27,11 @@ class FireSafetyRoom extends Model
         'has_smoke_detector',
         'smoke_detector_required',
         'has_secondary_exit',
+        'is_evacuation_room',
+        'Main_evac',
+        'Buffer_evac',
         'secondary_exit_remarks',
+        'evacuation_room_remarks',
         'last_inspector_id',
         'approval_status',
         'approval_message'

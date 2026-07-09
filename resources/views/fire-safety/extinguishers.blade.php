@@ -345,6 +345,19 @@
                                                                                                                 </span>
                                                                                                             @endif
                                                                                                         @endif
+                                                                        @if($room->is_evacuation_room)
+                                                                            <span class="badge bg-info">
+                                                                                <i class="fas fa-person-shelter me-1"></i>
+                                                                                Evacuation Room
+                                                                                @if($room->Main_evac && $room->Buffer_evac)
+                                                                                    (Main & Buffer)
+                                                                                @elseif($room->Main_evac)
+                                                                                    (Main)
+                                                                                @elseif($room->Buffer_evac)
+                                                                                    (Buffer)
+                                                                                @endif
+                                                                            </span>
+                                                                        @endif
                                                                                                     </div>
                                                                                                 </td>
                                                                                                 <td class="text-end">
@@ -596,6 +609,15 @@
                                                                     $remarks .= ' <span class="badge bg-success text-white">(Approve)</span>';
                                                                 } elseif ($item->approval_status === 'rejected') {
                                                                     $remarks .= ' <span class="badge bg-danger text-white">(Not Approve)</span>';
+                                                                }
+
+                                                                if ($item->is_evacuation_room) {
+                                                                            $typeText = '';
+                                                                            if ($item->Main_evac && $item->Buffer_evac) $typeText = ' (Main & Buffer)';
+                                                                            elseif ($item->Main_evac) $typeText = ' (Main)';
+                                                                            elseif ($item->Buffer_evac) $typeText = ' (Buffer)';
+                                                                            
+                                                                            $remarks .= ' <span class="badge bg-info text-white"><i class="fas fa-person-shelter me-1"></i>Evacuation Room' . $typeText . '</span>';
                                                                 }
 
                                                                 $location = ($item->building->building_no ?? '?') . ', ' . $item->floor_label;
@@ -872,6 +894,39 @@
                             </div>
                         </div>
 
+                        <!-- New row: Can be used as evacuation room? -->
+                        <div class="row mb-2">
+                            <div class="col-12">
+                                <div class="card border-info" style="background-color: rgba(0, 210, 255, 0.05);">
+                                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                        <span class="fw-bold text-info">
+                                            <i class="fas fa-person-shelter me-2"></i>Can be used as evacuation room?
+                                        </span>
+                                        <div class="form-check form-switch mb-0">
+                                            <input class="form-check-input room-extra-is-evacuation" type="checkbox" name="is_evacuation_room" id="updateRoomIsEvacuationRoom" value="1">
+                                            <label class="form-check-label fw-bold text-dark mb-0" for="updateRoomIsEvacuationRoom">Yes</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Evacuation Type Row (Buffer / Main) -->
+                        <div class="row mb-4 d-none room-extra-evac-type-row" id="updateRoomEvacTypeRow">
+                            <div class="col-12 ps-4">
+                                <div class="d-flex gap-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input room-extra-buffer-evac" type="checkbox" name="Buffer_evac" value="1" id="updateEvacBuffer">
+                                        <label class="form-check-label small fw-bold" for="updateEvacBuffer">Buffer</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input room-extra-main-evac" type="checkbox" name="Main_evac" value="1" id="updateEvacMain">
+                                        <label class="form-check-label small fw-bold" for="updateEvacMain">Main</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- 4th row (becomes 5th): Remarks & the interchangeable Secondary Exit Details / Remarks for No Secondary Exit -->
                         <div class="row g-3">
                             <div class="col-md-6 px-1">
@@ -1041,6 +1096,38 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- New row: Can be used as evacuation room? -->
+                        <div class="row mb-2">
+                            <div class="col-12">
+                                <div class="card border-info" style="background-color: rgba(0, 210, 255, 0.05);">
+                                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                        <span class="fw-bold text-info">
+                                            <i class="fas fa-person-shelter me-2"></i>Can be used as evacuation room?
+                                        </span>
+                                        <div class="form-check form-switch mb-0">
+                                            <input class="form-check-input" type="checkbox" name="is_evacuation_room" id="addRoomIsEvacuationRoom" value="1">
+                                            <label class="form-check-label fw-bold text-dark" for="addRoomIsEvacuationRoom">Yes</label>
+                                        </div>
+                                    </div> <!-- Closes card-body -->
+                                </div> <!-- Closes card -->
+                            </div> <!-- Closes col-12 -->
+                        </div> <!-- Closes row -->
+                        <div class="row mb-4 d-none" id="addRoomEvacTypeRow">
+                            <div class="col-12 ps-4">
+                                <div class="d-flex gap-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="Buffer_evac" value="1" id="addEvacBuffer">
+                                        <label class="form-check-label small fw-bold" for="addEvacBuffer">Buffer</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="Main_evac" value="1" id="addEvacMain">
+                                        <label class="form-check-label small fw-bold" for="addEvacMain">Main</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <div class="row g-3">
                             <div class="col-md-6 px-1">
@@ -1445,10 +1532,18 @@
         }
 
         // Named function for room floor population so it can be called/awaited explicitly
-        async function updateRoomFloors(buildingId) {
-            const floorSelect = document.getElementById('roomFloorSelect');
-            floorSelect.innerHTML = '<option value="">Select Floor</option>';
-            floorSelect.disabled = true;
+       async function updateRoomFloors(buildingId) {
+    const floorSelect = document.getElementById('roomFloorSelect');
+    floorSelect.innerHTML = `
+        <option value="">Select Floor</option>
+        <option value="gymnasium">Gymnasium</option>
+        <option value="cafeteria">Cafeteria</option>
+        <option value="library">Library</option>
+        <option value="science_laboratory">Science Laboratory</option>
+        <option value="computer_laboratory">Computer Laboratory</option>
+    `;
+    floorSelect.disabled = false;
+
 
             if (!buildingId) return;
 
@@ -1695,6 +1790,17 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card border-info" style="background-color: rgba(0, 210, 255, 0.05);">
+                                <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold text-info"><i class="fas fa-person-shelter me-2"></i>Can be used as evacuation room?</span>
+                                    <div class="form-check form-switch mb-0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold small text-muted text-uppercase">General Remarks</label>
@@ -1765,6 +1871,12 @@
                     smokeNo.checked = false;
                 }
             };
+
+            const isEvacuation = card.querySelector('.room-extra-is-evacuation');
+            const evacTypeRow = card.querySelector('.room-extra-evac-type-row');
+            isEvacuation.addEventListener('change', () => {
+                evacTypeRow.classList.toggle('d-none', !isEvacuation.checked);
+            });
 
             buildingSelect.addEventListener('change', async () => {
                 fillFloors();
@@ -1932,6 +2044,13 @@
             if (smokeInstalledNo) smokeInstalledNo.checked = false;
             if (smokeInstalledRow) smokeInstalledRow.classList.add('d-none');
 
+            const isEvacuationRoom = document.getElementById('addRoomIsEvacuationRoom');
+            if (isEvacuationRoom) isEvacuationRoom.checked = false;
+            const addEvacTypeRow = document.getElementById('addRoomEvacTypeRow');
+            if (addEvacTypeRow) addEvacTypeRow.classList.add('d-none');
+            if (document.getElementById('addEvacBuffer')) document.getElementById('addEvacBuffer').checked = false;
+            if (document.getElementById('addEvacMain')) document.getElementById('addEvacMain').checked = false;
+
             const remarks = document.getElementById('addRoomRemarks');
             const secondaryRemarks = document.getElementById('addSecondaryExitRemarks');
             const secondaryLabel = document.getElementById('addSecondaryExitRemarksLabel');
@@ -1998,6 +2117,7 @@
             const getValue = (selector) => form.querySelector(selector)?.value || '';
             const smokeDetectorRequired = form.querySelector('#addRoomSmokeDetectorRequired')?.checked ? '1' : '0';
             const hasSecondaryExit = form.querySelector('#addRoomSecondaryExit')?.checked ? '1' : '0';
+            const isEvacuationRoom = form.querySelector('#addRoomIsEvacuationRoom')?.checked ? '1' : '0';
             return {
                 unified_school_id: getValue('#roomSchoolId'),
                 building_id: getValue('#roomBuildingSelect'),
@@ -2007,6 +2127,9 @@
                 room_type_config_id: getValue('#room_type_select'),
                 smoke_detector_required: smokeDetectorRequired,
                 has_smoke_detector: getValue('#addRoomSmokeDetector') || '0',
+                is_evacuation_room: isEvacuationRoom,
+                Buffer_evac: form.querySelector('#addEvacBuffer')?.checked ? '1' : '0',
+                Main_evac: form.querySelector('#addEvacMain')?.checked ? '1' : '0',
                 has_secondary_exit: hasSecondaryExit,
                 secondary_exit_remarks: getValue('textarea[name="secondary_exit_remarks"]'),
                 remarks: getValue('textarea[name="remarks"]')
@@ -2030,6 +2153,9 @@
                     room_name: card.querySelector('.room-extra-name')?.value || '',
                     room_type_config_id: card.querySelector('.room-extra-type')?.value || '',
                     smoke_detector_required: card.querySelector('.room-extra-smoke-required')?.checked ? '1' : '0',
+                    is_evacuation_room: card.querySelector('.room-extra-is-evacuation')?.checked ? '1' : '0',
+                    Buffer_evac: card.querySelector('.room-extra-buffer-evac')?.checked ? '1' : '0',
+                    Main_evac: card.querySelector('.room-extra-main-evac')?.checked ? '1' : '0',
                     has_smoke_detector: hasSmoke,
                     has_secondary_exit: card.querySelector('.room-extra-secondary-exit')?.checked ? '1' : '0',
                     secondary_exit_remarks: card.querySelector('.room-extra-secondary-remarks')?.value || '',
@@ -3752,6 +3878,16 @@
                 tableBody.innerHTML = '';
                 data.forEach(item => {
                     const roomDisplay = (item.room_code || 'N/A') + (item.room_name ? ' - ' + item.room_name : '');
+                    let remarksHtml = item.remarks || '-';
+                    if (item.is_evacuation_room) {
+                        let typeText = '';
+                        if (item.Main_evac && item.Buffer_evac) typeText = ' (Main & Buffer)';
+                        else if (item.Main_evac) typeText = ' (Main)';
+                        else if (item.Buffer_evac) typeText = ' (Buffer)';
+
+                        remarksHtml += ` <span class="badge bg-info text-white"><i class="fas fa-person-shelter me-1"></i>Evacuation Room${typeText}</span>`;
+                    }
+
                     const row = `
                         <tr>
                             <td>${item.last_updated || '-'}</td>
@@ -3759,7 +3895,7 @@
                             <td class="fw-bold">${roomDisplay}</td>
                             <td>${item.nearest_extinguisher}</td>
                             <td>${item.inspector || 'Unknown'}</td>
-                            <td>${item.remarks || '-'}</td>
+                            <td>${remarksHtml}</td>
                             <td class="text-end">
                                 <button class="btn btn-sm btn-outline-primary" onclick="openUpdateRoomModal(${item.room_id})">
                                     <i class="fas fa-search"></i> Inspect
@@ -3976,6 +4112,12 @@
                 document.getElementById('updateRoomSecondaryExit').checked = hasSecondary;
                 document.getElementById('updateSecondaryExitRemarks').value = data.secondary_exit_remarks || '';
                 document.getElementById('updateSecondaryExitRemarksLabel').textContent = hasSecondary ? 'Secondary Exit Details' : 'Remarks for No Secondary Exit';
+
+                document.getElementById('updateRoomIsEvacuationRoom').checked = !!data.is_evacuation_room;
+                const typeRow = document.getElementById('updateRoomEvacTypeRow');
+                if (typeRow) typeRow.classList.toggle('d-none', !data.is_evacuation_room);
+                if (document.getElementById('updateEvacBuffer')) document.getElementById('updateEvacBuffer').checked = !!data.Buffer_evac;
+                if (document.getElementById('updateEvacMain')) document.getElementById('updateEvacMain').checked = !!data.Main_evac;
 
                 // Populate candidates for nearest extinguisher
                 const candidatesResp = await fetch(`/fire-safety/room/${roomId}/candidates`);
@@ -4387,6 +4529,22 @@
                     localStorage.setItem('opened_buildings', JSON.stringify(list));
                 });
             });
+
+            // Toggles for Evacuation Room options
+            const addEvacToggle = document.getElementById('addRoomIsEvacuationRoom');
+            const addEvacRow = document.getElementById('addRoomEvacTypeRow');
+            if (addEvacToggle && addEvacRow) {
+                addEvacToggle.addEventListener('change', () => {
+                    addEvacRow.classList.toggle('d-none', !addEvacToggle.checked);
+                });
+            }
+            const updateEvacToggle = document.getElementById('updateRoomIsEvacuationRoom');
+            const updateEvacRow = document.getElementById('updateRoomEvacTypeRow');
+            if (updateEvacToggle && updateEvacRow) {
+                updateEvacToggle.addEventListener('change', () => {
+                    updateEvacRow.classList.toggle('d-none', !updateEvacToggle.checked);
+                });
+            }
         });
     </script>
 @endsection

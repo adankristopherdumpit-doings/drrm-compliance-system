@@ -276,12 +276,7 @@
                                             data-bs-target="#addBuildingModal">
                                         <i class="fas fa-plus me-1"></i> Add Building
                                     </button>
-                                    <button class="btn btn-success btn-sm inspect-now-btn"
-                                            data-school-id="{{ $school->id }}"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#inspectNowModal">
-                                        <i class="fas fa-clipboard-check me-1"></i> Inspect Now
-                                    </button>
+                        
                                     @endif
 
                                     <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#printOptionsModal">
@@ -414,7 +409,7 @@
                 </div>
 
                 <!-- History Section -->
-                <div class="row mt-4" id="inspection-history-section">
+                <div class="row mt-4" id="layouts">
                     <!-- Inspected Checklist History -->
                     <div class="col-lg-6">
                         <div class="card dashboard-card h-100">
@@ -723,7 +718,8 @@
                                     <option value="">Select Type</option>
                                     <option value="Earthquake">Earthquake</option>
                                     <option value="Fire">Fire</option>
-                                    <option value="Both">Both Earthquake & Fire</option>
+                                    <option value="Tsunami">Tsunami</option>
+                                    <option value="Lockdown">Lockdown</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
@@ -2367,7 +2363,7 @@
 
                 const response = await fetch('{{ route('fire-safety.inspection.store') }}', {
                     method: 'POST',
-                    headers: {
+                    headers: { // This route is now handled by DrillMonitoringController
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Accept': 'application/json'
                     },

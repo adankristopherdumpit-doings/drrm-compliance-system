@@ -978,7 +978,10 @@ class FireSafetyController extends Controller
             'has_smoke_detector' => 'boolean',
             'has_secondary_exit' => 'boolean',
             'secondary_exit_remarks' => 'nullable|string',
-            'remarks' => 'nullable|string'
+            'remarks' => 'nullable|string',
+            'is_evacuation_room' => 'boolean',
+            'Buffer_evac' => 'boolean',
+            'Main_evac' => 'boolean',
         ];
 
         if (Schema::hasColumn('fire_safety_rooms', 'engineer_last_inspection_date')) {
@@ -997,6 +1000,18 @@ class FireSafetyController extends Controller
 
         if (!isset($validated['has_secondary_exit'])) {
             $validated['has_secondary_exit'] = false;
+        }
+
+        if (!isset($validated['is_evacuation_room'])) {
+            $validated['is_evacuation_room'] = false;
+        }
+
+        if (!isset($validated['Buffer_evac'])) {
+            $validated['Buffer_evac'] = false;
+        }
+
+        if (!isset($validated['Main_evac'])) {
+            $validated['Main_evac'] = false;
         }
 
         // If room type changed, update the snapshot fields and clear all extinguisher coverage for this room
@@ -1284,7 +1299,10 @@ public function storeRoom(Request $request)
         'has_smoke_detector' => 'boolean',
         'has_secondary_exit' => 'boolean',
         'secondary_exit_remarks' => 'nullable|string',
-        'remarks' => 'nullable|string'
+        'remarks' => 'nullable|string',
+        'is_evacuation_room' => 'boolean',
+        'Buffer_evac' => 'boolean',
+        'Main_evac' => 'boolean'
     ];
 
     if (Schema::hasColumn('fire_safety_rooms', 'engineer_last_inspection_date')) {
@@ -1303,6 +1321,18 @@ public function storeRoom(Request $request)
 
     if (!isset($validated['has_secondary_exit'])) {
         $validated['has_secondary_exit'] = false;
+    }
+
+    if (!isset($validated['is_evacuation_room'])) {
+        $validated['is_evacuation_room'] = false;
+    }
+
+    if (!isset($validated['Buffer_evac'])) {
+        $validated['Buffer_evac'] = false;
+    }
+
+    if (!isset($validated['Main_evac'])) {
+        $validated['Main_evac'] = false;
     }
 
     // ensure room_name is not null since database column is non-nullable
@@ -1448,6 +1478,9 @@ public function storeRoom(Request $request)
             'has_secondary_exit' => $room->has_secondary_exit,
             'secondary_exit_remarks' => $room->secondary_exit_remarks,
             'is_center_room' => $isCenterRoom,
+            'is_evacuation_room' => (bool)$room->is_evacuation_room,
+            'Buffer_evac' => (bool)$room->Buffer_evac,
+            'Main_evac' => (bool)$room->Main_evac,
             'host_room_id' => $hostRoomId,
             'host_room_code' => $hostRoomCode,
             'building' => $room->building ? ($room->building->building_no . ($room->building->building_name ? ' - ' . $room->building->building_name : '')) : 'N/A',
@@ -2419,7 +2452,10 @@ public function storeRoom(Request $request)
                     'inspector' => $r->lastInspector->name ?? 'Unknown',
                     'remarks' => $remarks,
                     'last_updated' => $r->updated_at->format('Y-m-d h:i A'),
-                    'approval_status' => $r->approval_status
+                    'approval_status' => $r->approval_status,
+                    'is_evacuation_room' => (bool)$r->is_evacuation_room,
+                    'Main_evac' => (bool)$r->Main_evac,
+                    'Buffer_evac' => (bool)$r->Buffer_evac
                 ];
             });
 
@@ -2560,7 +2596,9 @@ public function storeRoom(Request $request)
             'other_building_type' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'features' => 'nullable|array',
-            'required_extinguishers' => 'nullable|integer|min:0'
+            'required_extinguishers' => 'nullable|integer|min:0',
+            'compliance_status' => 'nullable|in:Compliant,Non-Compliant,Partially Compliant',
+            'compliance_reason' => 'nullable|required_if:compliance_status,Non-Compliant|string|max:500'
         ]);
 
         if ($request->building_type === 'Others' && $request->has('other_building_type')) {
@@ -2599,6 +2637,11 @@ public function storeRoom(Request $request)
     if (isset($validated['features'])) {
         $validated['features'] = implode(',', $validated['features']);
     }
+    $validated['features'] = $validated['features'] ?? null;
+
+    // Fallback if the field is empty in the request
+    $validated['compliance_status'] = $validated['compliance_status'] ?? 'Non-Compliant';
+
     $building = FireSafetyBuilding::create($validated);
 
         ActivityLog::log('fire_safety', 'Created building: ' . ($building->building_name ?? $building->building_no), [
@@ -3201,111 +3244,7 @@ public function storeRoom(Request $request)
         }
     }
 
-    // Store inspection (Inspect Now)
-    public function storeInspection(Request $request)
-    {
-        if (auth()->user()->role === 'viewer') {
-            return response()->json(['success' => false, 'message' => 'Viewers cannot save inspections.'], 403);
-        }
-
-        if (auth()->user()->role !== 'admin' && (int)$request->unified_school_id !== (int)auth()->user()->school_id) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized access to this school.'], 403);
-        }
-
-        $validated = $request->validate([
-            'unified_school_id' => 'required|exists:schools,id',
-            'drill_type' => 'required|string',
-            'inspection_date' => 'required|date',
-            'inspection_time' => 'required',
-            'time_started' => 'nullable',
-            'time_finished' => 'nullable',
-            'elapsed_time' => 'nullable',
-            'no_of_exits' => 'nullable|integer',
-            'no_of_buildings' => 'nullable|integer',
-            'no_of_students' => 'nullable|integer',
-            'no_of_personnel' => 'nullable|integer',
-            'monitored_by' => 'required|string',
-            'monitored_by_position' => 'nullable|string',
-            'checklist_data' => 'nullable|array',
-            'observers_data' => 'nullable|array',
-            'remarks' => 'nullable|string',
-            'coordinator_name' => 'nullable|string',
-            'school_head_name' => 'nullable|string',
-        ]);
-
-        $inspection = FireSafetyInspection::create($validated);
-
-        // Create notification for inspection
-        $school = School::find($validated['unified_school_id']);
-        self::createFireSafetyNotification(
-            'inspection',
-            'Inspection Completed: ' . $validated['drill_type'],
-            $validated['drill_type'] . ' inspection at ' . ($school->school_name ?? 'Unknown School') . ' on ' . $validated['inspection_date'] . '. Monitored by: ' . $validated['monitored_by'],
-            $validated['unified_school_id'],
-            'see_inspection',
-            ['inspection_id' => $inspection->id, 'unified_school_id' => $validated['unified_school_id']]
-        );
-
-        ActivityLog::log('fire_safety', 'Created inspection: ' . $validated['drill_type'], [
-            'unified_school_id' => $validated['unified_school_id'],
-            'notes' => $validated['remarks'] ?? null,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Inspection saved successfully!',
-            'inspection' => $inspection
-        ]);
-    }
-
-    // Update inspection
-    public function updateInspection(Request $request, $id)
-    {
-        if (auth()->user()->role === 'viewer') {
-            return response()->json(['success' => false, 'message' => 'Viewers cannot update inspections.'], 403);
-        }
-
-        $inspection = FireSafetyInspection::findOrFail($id);
-
-        if (auth()->user()->role !== 'admin' && (int)$inspection->unified_school_id !== (int)auth()->user()->school_id) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized access to this inspection.'], 403);
-        }
-
-        $validated = $request->validate([
-            'unified_school_id' => 'required|exists:schools,id',
-            'drill_type' => 'required|string',
-            'inspection_date' => 'required|date',
-            'inspection_time' => 'required',
-            'time_started' => 'nullable',
-            'time_finished' => 'nullable',
-            'elapsed_time' => 'nullable|string',
-            'no_of_exits' => 'nullable|integer',
-            'no_of_buildings' => 'nullable|integer',
-            'no_of_students' => 'nullable|integer',
-            'no_of_personnel' => 'nullable|integer',
-            'monitored_by' => 'required|string',
-            'monitored_by_position' => 'nullable|string',
-            'checklist_data' => 'nullable|array',
-            'observers_data' => 'nullable|array',
-            'remarks' => 'nullable|string',
-            'coordinator_name' => 'nullable|string',
-            'school_head_name' => 'nullable|string',
-        ]);
-
-        $inspection->update($validated);
-
-        ActivityLog::log('fire_safety', 'Updated inspection: ' . $validated['drill_type'], [
-            'unified_school_id' => $validated['unified_school_id'],
-            'notes' => $validated['remarks'] ?? null,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Inspection updated successfully!',
-            'inspection' => $inspection
-        ]);
-    }
-
+ 
     // Placeholder checklist page to prevent 404 (until checklist UI is implemented)
     public function inspectionChecklist($id)
     {
@@ -5544,4 +5483,15 @@ public function storeRoom(Request $request)
 
         return redirect()->back()->with('error', 'Failed to upload image.');
     }
+
+
+public function getRoomsForBuilding($building_id)
+{
+    // Laravel queries your database (visible in phpMyAdmin)
+    $rooms = DB::table('fire_safety_rooms') // or whatever your rooms table is named
+               ->where('building_id', $building_id)
+               ->get();
+
+    return response()->json($rooms);
+}
 }

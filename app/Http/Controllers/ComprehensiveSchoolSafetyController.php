@@ -2124,7 +2124,7 @@ class ComprehensiveSchoolSafetyController extends Controller
         ]);
 
         return redirect()
-            ->route('comprehensive-school-safety.school.storage', $school->id)
+            ->route('#', $school->id)
             ->with('success', 'Storage item added successfully.');
     }
 
@@ -2159,7 +2159,7 @@ class ComprehensiveSchoolSafetyController extends Controller
         ]);
 
         return redirect()
-            ->route('comprehensive-school-safety.school.storage', $school->id)
+            ->route('#', $school->id)
             ->with('success', 'Storage item updated.');
     }
 
@@ -2178,7 +2178,7 @@ class ComprehensiveSchoolSafetyController extends Controller
         ]);
 
         return redirect()
-            ->route('comprehensive-school-safety.school.storage', $school->id)
+            ->route('#', $school->id)
             ->with('success', 'Storage item removed.');
     }
 }

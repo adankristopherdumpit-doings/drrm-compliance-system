@@ -298,11 +298,6 @@
             <i class="fas fa-chart-pie"></i> Analytics &amp; Reports
         </a>
 
-        <a class="csss-menu-link {{ $activeMenu === 'storage' ? 'active' : '' }}"
-           href="{{ $selectedSchool ? route('comprehensive-school-safety.school.storage', $selectedSchool->id) : route('comprehensive-school-safety.dashboard') }}">
-            <i class="fas fa-boxes-stacked"></i> Storage
-        </a>
-
 {{--
         <a class="csss-menu-link {{ $activeMenu === 'students' ? 'active' : '' }}"
            href="{{ $selectedSchool ? route('comprehensive-school-safety.school.students', $selectedSchool->id) : route('comprehensive-school-safety.dashboard') }}">

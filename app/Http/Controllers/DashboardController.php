@@ -141,11 +141,23 @@ class DashboardController extends Controller
         })->count();
         $cssRate = $totalSchoolsCount > 0 ? ($cssPassed / $totalSchoolsCount) * 100 : 0;
 
-        // 5. Hazard Mapping %
+        // 5. Drill Monitoring %
+        $dmMonitored = School::whereHas('fireSafetyDrills', function($q) {
+            $q->where('status', 'completed');
+        })->count();
+        $dmRate = $totalSchoolsCount > 0 ? ($dmMonitored / $totalSchoolsCount) * 100 : 0;
+
+        // 6. Hazard Mapping %
         $hmConfigured = School::whereHas('fireSafetyBuildings')->count();
         $hmRate = $totalSchoolsCount > 0 ? ($hmConfigured / $totalSchoolsCount) * 100 : 0;
 
-        $overallComplianceRate = round(($fsRate + $tfRate + $icRate + $cssRate + $hmRate) / 5, 1);
+        // 7. Damage Report %
+        $daCompleted = School::whereHas('damageReport', function($q) {
+            $q->where('status', 'completed');
+        })->count();
+        $daRate = $totalSchoolsCount > 0 ? ($daCompleted / $totalSchoolsCount) * 100 : 0;
+
+        $overallComplianceRate = round(($fsRate + $tfRate + $icRate + $cssRate + $dmRate + $hmRate + $daRate) / 7, 1);
 
         // 4th Metric: Total Population (Students + Personnel)
         $totalPopulationCount = School::sum('number_students') + School::sum('number_personnel');
@@ -623,6 +635,7 @@ class DashboardController extends Controller
             'fire_safety',
             'typhoon_flood',
             'incident_checklist',
+            'drill_monitoring',
             'hazard_mapping',
         ];
 
@@ -691,7 +704,9 @@ class DashboardController extends Controller
                     'fire_safety',
                     'typhoon_flood',
                     'incident_checklist',
+                    'drill_monitoring',
                     'hazard_mapping',
+                    'casualty_tracking',
                 ]);
 
                 $mergedModules = $baseModules
@@ -744,7 +759,9 @@ class DashboardController extends Controller
             'typhoon_flood',
             'incident_checklist',
             'comprehensive_school_safety',
+            'drill_monitoring',
             'hazard_mapping',
+            'casualty_tracking',
         ];
 
         $selectedModules = collect((array) $request->input('modules', []))
@@ -757,7 +774,9 @@ class DashboardController extends Controller
                 'fire_safety',
                 'typhoon_flood',
                 'incident_checklist',
+                'drill_monitoring',
                 'hazard_mapping',
+                'casualty_tracking',
             ];
 
             if (in_array('comprehensive_school_safety', (array) $request->input('modules', []), true)) {

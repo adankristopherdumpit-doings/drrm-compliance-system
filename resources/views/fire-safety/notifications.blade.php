@@ -404,9 +404,9 @@ document.addEventListener('DOMContentLoaded', function() {
 function navigateToInspection(data) {
     const schoolId = data.school_id;
     if ("{{ auth()->user()->role }}" === 'admin' && schoolId) {
-        switchSchoolAndRedirect(schoolId, '/fire-safety/buildings#inspection-history-section');
+        switchSchoolAndRedirect(schoolId, '/fire-safety/buildings#layouts');
     } else {
-        window.location.href = '/fire-safety/buildings#inspection-history-section';
+        window.location.href = '/fire-safety/buildings#layouts';
     }
 }
 

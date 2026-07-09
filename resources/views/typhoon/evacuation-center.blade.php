@@ -237,7 +237,7 @@
             </a>
             <div>
                 <h1 class="h3 mb-0 fw-bold text-white">
-                    {{ $ec->school->school_name ?? 'NOT DEFINED' }}
+                    {{ $ec->school_name ?? 'NOT DEFINED' }}
                 </h1>
                 <div class="small text-info opacity-75 fw-bold text-uppercase tracking-wider">EVACUATION HUB</div>
             </div>
@@ -351,7 +351,7 @@
                         @if($ec->usage_status === 'full')
                             <div class="badge bg-danger shadow-sm px-4 py-3 h5 mb-3 w-100 fw-bold" style="border: 1px solid rgba(255,255,255,0.2);">AT CAPACITY</div>
                         @elseif($ec->usage_status === 'occupied')
-                            <div class="badge bg-primary shadow-sm px-4 py-3 h5 mb-3 w-100 fw-bold" style="border: 1px solid rgba(255,255,255,0.2);">ACTIVE / OCCUPIED</div>
+                            <div class="badge bg-primary shadow-sm px-4 py-3 h5 mb-3 w-100 fw-bold" style="border: 1px solid rgba(255,255,255,0.2);"> STANDBY</div>
                         @elseif($ec->usage_status === 'decamp')
                             <div class="badge shadow-sm px-4 py-3 h5 mb-3 w-100 fw-bold" style="background-color: #6f42c1; border: 1px solid rgba(255,255,255,0.2);">DECAMP / CLOSING</div>
                         @else
@@ -369,7 +369,7 @@
 
     <div class="row g-4 mb-4">
         {{-- Current Occupants + Registry History --}}
-        <div class="col-lg-8">
+        <div class="col-lg-12">
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="dashboard-card shadow-lg border-0 h-100" style="min-height: 520px;">
@@ -462,41 +462,6 @@
             </div>
         </div>
 
-        <div class="col-lg-4">
-            {{-- Quick Announcements --}}
-            <div class="dashboard-card shadow-lg border-0" style="height: 100%; min-height: 520px;">
-                <div class="card-header-custom d-flex justify-content-between align-items-center py-3">
-                    <span><i class="fas fa-bullhorn me-2"></i>Quick Announcements</span>
-                    <button class="btn btn-sm btn-info text-white fw-bold px-3 shadow-sm" style="font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#announceSomethingModal">
-                        <i class="fas fa-plus me-1"></i> ANNOUNCE
-                    </button>
-                </div>
-                <div class="p-4" style="height: calc(100% - 55px); overflow-y: auto;">
-                    @forelse($quickAnnouncements as $ann)
-                        <div class="alert mb-3 border-0 shadow-sm small p-3 d-flex gap-3 {{ (isset($ann->action_data['urgency']) && $ann->action_data['urgency'] === 'danger') ? 'alert-danger' : ((isset($ann->action_data['urgency']) && $ann->action_data['urgency'] === 'warning') ? 'alert-warning' : 'alert-info') }}" style="border-radius: 12px; position: relative;">
-                            <div class="bg-white bg-opacity-25 p-2 rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                <i class="fas {{ (isset($ann->action_data['urgency']) && $ann->action_data['urgency'] === 'danger') ? 'fa-exclamation-triangle' : 'fa-info-circle' }}"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <strong class="text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">{{ $ann->title }}</strong>
-                                    <span class="text-muted fw-bold" style="font-size: 0.6rem;">{{ $ann->created_at->diffForHumans() }}</span>
-                                </div>
-                                <div class="text-dark">{{ $ann->message }}</div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="alert alert-info border-0 shadow-sm small p-3" style="border-radius: 12px;">
-                            <i class="fas fa-info-circle me-2"></i> No active announcements for this center today.
-                        </div>
-                        <div class="text-center py-4 opacity-25">
-                            <i class="fas fa-comment-slash fa-2x mb-2 text-muted"></i>
-                            <p class="small mb-0 text-muted">Announcements will appear here</p>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -599,47 +564,6 @@
     </div>
 </div>
 
-{{-- MODAL: QUICK ANNOUNCEMENT --}}
-<div class="modal fade" id="announceSomethingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <form method="POST" action="{{ route('typhoon.announcements.store') }}">
-            @csrf
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header" style="background-color: var(--card-header-bg); color: white;">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-bullhorn me-2 text-info"></i>PUBLIC ANNOUNCEMENT</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4 text-dark">
-                    <input type="hidden" name="school_id" value="{{ $ec->id }}">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">TITLE / SUBJECT</label>
-                        <input type="text" name="title" class="form-control" placeholder="e.g. Relief Distribution Notice" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">URGENCY LEVEL</label>
-                        <select name="urgency" class="form-select">
-                            <option value="info">INFO - Standard Update</option>
-                            <option value="warning">WARNING - Important Notice</option>
-                            <option value="danger">URGENT - Critical Requirement</option>
-                        </select>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label fw-bold text-muted small">MESSAGE CONTENT</label>
-                        <textarea name="message" rows="4" class="form-control" placeholder="Type your announcement details here..." required></textarea>
-                    </div>
-                    <div class="mt-3 small text-muted italic">
-                        <i class="fas fa-info-circle me-1"></i> This announcement will be visible to all users assigned to this site and on the notifications page.
-                    </div>
-                </div>
-                <div class="modal-footer bg-light shadow-sm">
-                    <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">CANCEL</button>
-                    <button type="submit" class="btn btn-info text-white px-5 fw-bold shadow-sm">POST ANNOUNCEMENT</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
 {{-- ===================== EVACUATION CENTER PRINT OVERLAY ===================== --}}
 <div id="evacPrintModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:9999; flex-direction:column; align-items:center; justify-content:flex-start; overflow-y:auto; padding: 1.5rem 0;">
 
@@ -671,7 +595,7 @@
                 </div>
             </div>
             <div style="text-align:right;">
-                <div style="font-size:1.5rem; font-weight:800; color:#00d2ff; letter-spacing:1px; line-height:1;">{{ $ec->school->school_name ?? $ec->identification }}</div>
+                <div style="font-size:1.5rem; font-weight:800; color:#00d2ff; letter-spacing:1px; line-height:1;">{{ $ec->school_name ?? $ec->identification }}</div>
                 <div style="font-size:0.8rem; color:#8892b0; margin-top:0.35rem;">{{ $ec->location ?? $ec->school->address }}</div>
                 <div style="font-size:0.65rem; color:#00d2ff; margin-top:0.2rem; font-weight:700; letter-spacing:1px;">📅 {{ now()->format('F d, Y | h:i A') }}</div>
             </div>

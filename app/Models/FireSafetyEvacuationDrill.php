@@ -24,4 +24,12 @@ class FireSafetyEvacuationDrill extends Model
     {
         return $this->belongsToMany(FireSafetyBuilding::class, 'fire_safety_drill_building', 'drill_id', 'building_id');
     }
+
+    /**
+     * Get the monitoring records associated with this scheduled drill.
+     */
+    public function monitorings()
+    {
+        return $this->hasMany(DrillMonitoring::class, 'drill_id');
+    }
 }

@@ -550,7 +550,6 @@
         </div> <!-- <- School Safety Status Section -->
 
 
-
         <!-- Passed Details Modal (Successful Inspection) -->
         <div class="modal fade" id="passedDetailsModal" tabindex="-1">
             <div class="modal-dialog modal-lg">

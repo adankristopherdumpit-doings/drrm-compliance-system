@@ -5,10 +5,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1 text-gray-800"><i class="fas fa-clipboard-check me-2"></i>Inspection Detail</h1>
-            <p class="text-muted small mb-0">Reviewing layoutstoring tool for {{ $inspection->school->school_name }}</p>
+            <p class="text-muted small mb-0">Reviewing monitoring tool for {{ $inspection->school->school_name }}</p>
         </div>
         <div class="btn-group">
-            <a href="{{ route('fire-safety.buildings') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('drill-monitoring.dashboard') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Back
             </a>
             <a href="{{ route('fire-safety.inspection.print', $inspection->id) }}" target="_blank" class="btn btn-dark">

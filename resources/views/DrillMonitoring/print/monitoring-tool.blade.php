@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drill Monitoring Report</title>
+    <title>Drill Monitoring Tool Report</title>
     <style>
         body { font-family: 'Arial', sans-serif; line-height: 1.2; color: #333; margin: 0; padding: 10px; font-size: 11px; }
         .header { text-align: center; margin-bottom: 10px; }
@@ -40,8 +40,18 @@
             .no-print { display: none; }
         }
 
-        .no-print { margin-bottom: 20px; text-align: center; }
-        .print-btn { padding: 10px 20px; background: #2c3e50; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        .no-print { 
+            margin-bottom: 20px; 
+            text-align: center; 
+            padding: 15px; 
+            background: #f8f9fa; 
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .print-btn { padding: 10px 20px; background: #2c3e50; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; }
+        .back-btn { padding: 10px 20px; background: #6c757d; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; text-decoration: none; }
         
         /* Fixed Header Layout */
         .print-header {
@@ -80,6 +90,7 @@
 <body>
     <div class="no-print">
         <button onclick="window.print()" class="print-btn">Print Document</button>
+        <a href="{{ route('drill-monitoring.dashboard') }}" class="back-btn">Back to Dashboard</a>
     </div>
 
     <!-- Improved Header using Table-like behavior for Print Stability -->
@@ -141,6 +152,26 @@
             <td style="border-left: none; font-weight: bold;">FIRE</td>
         </tr>
         <tr>
+            <td class="label" colspan="2"></td>
+            <td colspan="2"></td>
+            <td style="text-align: center; border-right: none;">
+                <span class="check-box" style="margin: 0;">
+                    {{ ($inspection->drill_type === 'Tsunami') ? '✓' : '' }}
+                </span>
+            </td>
+            <td style="border-left: none; font-weight: bold;">TSUNAMI</td>
+        </tr>
+        <tr>
+            <td class="label" colspan="2"></td>
+            <td colspan="2"></td>
+            <td style="text-align: center; border-right: none;">
+                <span class="check-box" style="margin: 0;">
+                    {{ ($inspection->drill_type === 'Lockdown') ? '✓' : '' }}
+                </span>
+            </td>
+            <td style="border-left: none; font-weight: bold;">LOCKDOWN</td>
+        </tr>
+        <tr>
             <td style="text-align: center; font-weight: bold;">{{ $inspection->time_started ?? 'N/A' }}</td>
             <td class="label">TIME STARTED</td>
             <td style="text-align: center; font-weight: bold;">{{ number_format($inspection->no_of_students ?? 0) }}</td>
@@ -165,33 +196,73 @@
         </tr>
     </table>
 
-    <!-- CHECKLIST ITEMS - 3 COLUMNS -->
+\    <!-- CHECKLIST ITEMS - 3 COLUMNS -->
     <div class="results-section">
         <h4>CHECKLIST ITEMS</h4>
+        <div style="margin-bottom: 5px; font-style: italic; font-size: 9px;">
+            Legend: ✓ Good | ○ Partial | ✘ Bad
+        </div>
         <table class="checklist-table">
             @php
                 $checklistData = $inspection->checklist_data ?? [];
-                // Use master list if available, otherwise fallback to saved data
-                if (isset($checklists) && count($checklists) > 0) {
-                    $allItems = $checklists->pluck('name')->toArray();
+                
+                // Mapping of evaluation keys to their formal labels
+                $evaluationMapping = [
+                    'alarm_audible' => 'Alarm',
+                    'routes_clear' => 'Evacuation plan(updated)',
+                    'participants_calm' => 'DRRM team',
+                    'hotline_numbers' => 'Hotline Numbers',
+                    'duck_cover_and_hold' => 'Duck Cover and Hold (ER)',
+                    'command_center' => 'Command Center',
+                    'student_release_form' => 'Student Release Form',
+                    'exit_signage' => 'Exit Signage',
+                    'bert_sert' => 'BERT/SERT',
+                    'wear_ids' => 'Wearing of IDs',
+                    'walk_casually' => 'Walked Casually',
+                    'first_aid_kit' => 'First Aid Kit',
+                    'actual_headcount' => 'Actual headcount',
+                    'directional_arrows' => 'Directional Arrows',
+                    'attendance_sheet' => 'Attendance Sheet',
+                    'megaphone' => 'Megaphone',
+                    'group_signage' => 'Group Signage',
+                    'guard_on_duty' => 'Guard on Duty',
+                    'school_id' => 'School ID of personnel',
+                    'open_doors' => 'Open Doors(EQ)',
+                    'closed_doors' => 'Closed Doors(Fire)'
+                ];
+
+                $displayItems = [];
+                $keys = array_keys($checklistData);
+                $isEvaluationStyle = !empty($keys) && is_string($keys[0]);
+
+                if ($isEvaluationStyle) {
+                    // Handle structured evaluation data (from Log New Drill form)
+                    foreach ($evaluationMapping as $key => $label) {
+                        $val = $checklistData[$key] ?? '';
+                        $symbol = '&nbsp;';
+                        if ($val === 'check') $symbol = '✓';
+                        elseif ($val === 'circle') $symbol = '○';
+                        elseif ($val === 'x') $symbol = '✘';
+                        
+                        $displayItems[] = ['label' => $label, 'symbol' => $symbol];
+                    }
                 } else {
-                    $allItems = $checklistData;
+                    // Fallback for simple checkbox-style data (from Inspect Now modal)
+                    foreach ($checklistData as $item) {
+                        $displayItems[] = ['label' => $item, 'symbol' => '✓'];
+                    }
                 }
-                $chunks = array_chunk($allItems, 3);
+                $chunks = array_chunk($displayItems, 3);
             @endphp
 
             @forelse($chunks as $chunk)
             <tr>
-                @foreach($chunk as $itemLabel)
+                @foreach($chunk as $item)
                 <td style="width: 33%;">
                     <span class="check-box">
-                        @if(in_array($itemLabel, $checklistData))
-                            ✓
-                        @else
-                            &nbsp;
-                        @endif
+                        {!! $item['symbol'] !!}
                     </span>
-                    {{ $itemLabel }}
+                    {{ $item['label'] }}
                 </td>
                 @endforeach
 
@@ -218,45 +289,76 @@
         <table class="checklist-table">
             @php
                 $obsData = $inspection->observers_data ?? [];
-                if (isset($observers) && count($observers) > 0) {
-                    $allObs = $observers->pluck('name')->toArray();
+                
+                // Mapping for structured data from Log New Drill
+                $observerMapping = [
+                    'local_barangay' => 'Local Barangay',
+                    'pnp'            => 'Philippine National Police (PNP)',
+                    'city_drrm'      => 'City DRRM',
+                    'bfp'            => 'Bureau of Fire Protection(BFP)',
+                    'pta_parents'    => 'PTA / Parent Observers',
+                    'otmps'          => 'OTMPS'
+                ];
+
+                $displayObservers = [];
+                
+                // Check if it's associative (structured) or simple array
+                $keys = array_keys($obsData);
+                $isStructured = !empty($keys) && is_string($keys[0]);
+
+                if ($isStructured) {
+                    // 1. Handle structured data (Log New Drill form)
+                    foreach ($observerMapping as $key => $label) {
+                        $isChecked = (isset($obsData[$key]) && $obsData[$key] === 'present');
+                        $displayObservers[] = ['label' => $label, 'checked' => $isChecked];
+                    }
                     
-                    // Add the explicit "Others" label to master list
-                    $allObs[] = 'OTHERS: (Please specify)';
-                    
-                    // Include any custom "Others: [text]" observers in the list
-                    foreach($obsData as $item) {
-                        if(strpos($item, 'Others: ') === 0 && !in_array($item, $allObs)) {
-                            $allObs[] = $item;
-                        }
+                    // 2. Handle "Others" from structured data
+                    if (isset($obsData['others_present']) && $obsData['others_present'] === 'present') {
+                        $label = 'Others: ' . ($obsData['others_specified'] ?? 'Not specified');
+                        $displayObservers[] = ['label' => $label, 'checked' => true];
                     }
                 } else {
-                    $allObs = $obsData;
+                    // Fallback for simple array (Inspect Now) or DB configuration
+                    // Get base list from DB if exists
+                    $baseList = (isset($observers) && count($observers) > 0) 
+                        ? $observers->pluck('name')->toArray() 
+                        : [];
+                    
+                    // Merge current data items that aren't already in baseList and aren't custom "Others:"
+                    foreach ($obsData as $item) {
+                        if (strpos($item, 'Others: ') !== 0 && !in_array($item, $baseList)) {
+                            $baseList[] = $item;
+                        }
+                    }
+
+                    foreach ($baseList as $name) {
+                        $displayObservers[] = ['label' => $name, 'checked' => in_array($name, $obsData)];
+                    }
+
+                    // Add custom "Others: [text]" items found in data
+                    foreach ($obsData as $item) {
+                        if (strpos($item, 'Others: ') === 0) {
+                            $displayObservers[] = ['label' => $item, 'checked' => true];
+                        }
+                    }
                 }
-                $obsChunks = array_chunk($allObs, 3);
+
+                $obsChunks = array_chunk($displayObservers, 3);
             @endphp
 
             @forelse($obsChunks as $chunk)
             <tr>
-                @foreach($chunk as $observerLabel)
+                @foreach($chunk as $observer)
                 <td style="width: 33%;">
                     <span class="check-box">
-                        @php
-                            $isChecked = in_array($observerLabel, $obsData);
-                            // If this is the generic label, check if any "Others: " items exist
-                            if (!$isChecked && $observerLabel === 'OTHERS: (Please specify)') {
-                                foreach($obsData as $o) {
-                                    if(strpos($o, 'Others: ') === 0) { $isChecked = true; break; }
-                                }
-                            }
-                        @endphp
-                        @if($isChecked)
+                        @if($observer['checked'])
                             ✓
                         @else
                             &nbsp;
                         @endif
                     </span>
-                    {{ $observerLabel }}
+                    {{ $observer['label'] }}
                 </td>
                 @endforeach
 
@@ -293,7 +395,7 @@
             <td>
                 <div style="text-align: left; font-weight: bold; margin-bottom: 5px;">Monitored By:</div>
                 <div class="sig-line"><strong>{{ $inspection->monitored_by ?? '_____________________' }}</strong></div>
-                <div class="sig-title">{{ $inspection->monitored_by_position ?? '_____________________' }}</div>
+               
             </td>
         </tr>
         <tr>
@@ -303,7 +405,8 @@
                 <div class="sig-title">School DRRM Coordinator</div>
                 
                 <div style="margin-top: 15px;"></div>
-                <div class="sig-line"><strong>{{ $inspection->school_head_name ?? '_____________________' }}</strong></div>
+                <!-- Changed underscores to a non-breaking space -->
+                <div class="sig-line"><strong>{{ $inspection->school_head_name ?? '    ' }}</strong></div>
                 <div class="sig-title">School Head / Principal</div>
             </td>
         </tr>
